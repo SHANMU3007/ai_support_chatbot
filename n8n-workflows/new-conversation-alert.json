@@ -1,0 +1,76 @@
+{
+  "name": "New Conversation Alert",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "new-conversation",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json[\"event\"]}}",
+              "operation": "equals",
+              "value2": "new_conversation"
+            }
+          ]
+        }
+      },
+      "id": "filter-event",
+      "name": "Filter: new_conversation",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "noreply@chatbotai.example.com",
+        "toEmail": "={{$json[\"data\"][\"ownerEmail\"]}}",
+        "subject": "New chat session started – {{$json[\"data\"][\"chatbotName\"]}}",
+        "text": "A new conversation has started on your chatbot \"{{$json[\"data\"][\"chatbotName\"]}}\".\n\nSession ID: {{$json[\"data\"][\"sessionId\"]}}\nVisitor: {{$json[\"data\"][\"visitorId\"]}}\nTime: {{$json[\"data\"][\"startedAt\"]}}\n\nView it in the dashboard.",
+        "options": {}
+      },
+      "id": "send-email",
+      "name": "Send Email Notification",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [680, 220]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"received\": true}"
+      },
+      "id": "respond-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [680, 380]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [{"node": "Filter: new_conversation", "type": "main", "index": 0}]
+      ]
+    },
+    "Filter: new_conversation": {
+      "main": [
+        [{"node": "Send Email Notification", "type": "main", "index": 0}],
+        [{"node": "Respond to Webhook", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "active": true,
+  "settings": { "executionOrder": "v1" }
+}

@@ -1,0 +1,30 @@
+version: "3.9"
+
+# Development overrides - hot reload enabled for all services
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./backend:/app
+    environment:
+      - DEBUG=true
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    command: npm run dev
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NODE_ENV=development
+
+  chromadb:
+    environment:
+      - CHROMA_SERVER_AUTH_CREDENTIALS_PROVIDER=
+      - CHROMA_SERVER_AUTH_PROVIDER=

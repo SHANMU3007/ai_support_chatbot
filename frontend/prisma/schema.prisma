@@ -1,0 +1,142 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String?
+  image         String?
+  plan          Plan      @default(FREE)
+  accounts      Account[]
+  sessions      Session[]
+  chatbots      Chatbot[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Chatbot {
+  id             String        @id @default(cuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  businessName   String
+  description    String?
+  systemPrompt   String        @db.Text
+  primaryColor   String        @default("#6366f1")
+  welcomeMessage String        @default("Hi! How can I help you today?")
+  language       String        @default("en")
+  isActive       Boolean       @default(true)
+  documents      Document[]
+  sessions       ChatSession[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+model Document {
+  id         String    @id @default(cuid())
+  chatbotId  String
+  chatbot    Chatbot   @relation(fields: [chatbotId], references: [id], onDelete: Cascade)
+  name       String
+  type       DocType
+  content    String    @db.Text
+  sourceUrl  String?
+  status     DocStatus @default(PENDING)
+  chunkCount Int       @default(0)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+model ChatSession {
+  id        String    @id @default(cuid())
+  chatbotId String
+  chatbot   Chatbot   @relation(fields: [chatbotId], references: [id], onDelete: Cascade)
+  visitorId String
+  language  String    @default("en")
+  messages  Message[]
+  metadata  Json?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Message {
+  id         String      @id @default(cuid())
+  sessionId  String
+  session    ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role       Role
+  content    String      @db.Text
+  tokens     Int?
+  confidence Float?
+  createdAt  DateTime    @default(now())
+}
+
+enum Plan {
+  FREE
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+enum DocType {
+  FAQ
+  PDF
+  URL
+  TEXT
+  DOCX
+}
+
+enum DocStatus {
+  PENDING
+  PROCESSING
+  DONE
+  FAILED
+}
+
+enum Role {
+  USER
+  ASSISTANT
+}

@@ -1,0 +1,102 @@
+{
+  "name": "Escalation to Human Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "escalation",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json[\"event\"]}}",
+              "operation": "equals",
+              "value2": "escalation"
+            }
+          ]
+        }
+      },
+      "id": "filter-escalation",
+      "name": "Filter: escalation",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "noreply@chatbotai.example.com",
+        "toEmail": "support@yourcompany.com",
+        "subject": "🚨 Escalation Required – {{$json[\"data\"][\"chatbotName\"]}}",
+        "text": "A customer needs human assistance.\n\nChatbot: {{$json[\"data\"][\"chatbotName\"]}}\nSession ID: {{$json[\"data\"][\"sessionId\"]}}\nVisitor: {{$json[\"data\"][\"visitorId\"]}}\nLast Message: {{$json[\"data\"][\"lastMessage\"]}}\nTime: {{$json[\"data\"][\"timestamp\"]}}\n\nPlease follow up immediately.",
+        "options": {}
+      },
+      "id": "alert-support",
+      "name": "Alert Support Team",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [680, 220]
+    },
+    {
+      "parameters": {
+        "url": "={{$env[\"SLACK_WEBHOOK_URL\"]}}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "🚨 *Escalation* from {{$json[\"data\"][\"chatbotName\"]}}: `{{$json[\"data\"][\"lastMessage\"]}}`\nSession: {{$json[\"data\"][\"sessionId\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "slack-notify",
+      "name": "Slack Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [680, 360]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"received\": true}"
+      },
+      "id": "respond-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [{"node": "Filter: escalation", "type": "main", "index": 0}]
+      ]
+    },
+    "Filter: escalation": {
+      "main": [
+        [
+          {"node": "Alert Support Team", "type": "main", "index": 0},
+          {"node": "Slack Notification", "type": "main", "index": 0}
+        ],
+        [{"node": "Respond to Webhook", "type": "main", "index": 0}]
+      ]
+    },
+    "Alert Support Team": {
+      "main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]
+    }
+  },
+  "active": true,
+  "settings": { "executionOrder": "v1" }
+}

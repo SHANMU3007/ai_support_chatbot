@@ -1,0 +1,85 @@
+{
+  "name": "Lead Capture to CRM",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-capture",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json[\"event\"]}}",
+              "operation": "equals",
+              "value2": "lead_captured"
+            }
+          ]
+        }
+      },
+      "id": "filter-lead",
+      "name": "Filter: lead_captured",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env[\"CRM_API_URL\"]}}/contacts",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            {"name": "email", "value": "={{$json[\"data\"][\"email\"]}}"},
+            {"name": "name", "value": "={{$json[\"data\"][\"name\"]}}"},
+            {"name": "source", "value": "chatbot"},
+            {"name": "chatbot_name", "value": "={{$json[\"data\"][\"chatbotName\"]}}"},
+            {"name": "session_id", "value": "={{$json[\"data\"][\"sessionId\"]}}"}
+          ]
+        },
+        "options": {}
+      },
+      "id": "create-crm-contact",
+      "name": "Create CRM Contact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [680, 220]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"received\": true}"
+      },
+      "id": "respond-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [680, 380]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{"node": "Filter: lead_captured", "type": "main", "index": 0}]]
+    },
+    "Filter: lead_captured": {
+      "main": [
+        [{"node": "Create CRM Contact", "type": "main", "index": 0}],
+        [{"node": "Respond to Webhook", "type": "main", "index": 0}]
+      ]
+    },
+    "Create CRM Contact": {
+      "main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]
+    }
+  },
+  "active": true,
+  "settings": { "executionOrder": "v1" }
+}

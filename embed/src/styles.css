@@ -1,0 +1,67 @@
+/* Embed widget styles – injected as a <style> tag at runtime */
+.cbai-widget * {
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.cbai-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  z-index: 2147483646;
+  transition: transform 0.2s;
+}
+
+.cbai-btn:hover {
+  transform: scale(1.1);
+}
+
+.cbai-frame {
+  position: fixed;
+  bottom: 96px;
+  right: 24px;
+  width: 380px;
+  height: 580px;
+  max-width: calc(100vw - 48px);
+  max-height: calc(100vh - 120px);
+  border-radius: 16px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+  z-index: 2147483645;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.cbai-frame.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+}
+
+.cbai-frame iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+@media (max-width: 480px) {
+  .cbai-frame {
+    bottom: 0;
+    right: 0;
+    width: 100vw;
+    height: 100vh;
+    max-width: 100vw;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+}

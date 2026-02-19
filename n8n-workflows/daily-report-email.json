@@ -1,0 +1,59 @@
+{
+  "name": "Daily Report Email",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Daily 8AM Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env[\"NEXTJS_API_URL\"]}}/api/analytics?period=daily",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "fetch-stats",
+      "name": "Fetch Daily Stats",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "reports@chatbotai.example.com",
+        "toEmail": "={{$env[\"REPORT_EMAIL\"]}}",
+        "subject": "📊 Daily ChatBot AI Report – {{$now.format('yyyy-MM-dd')}}",
+        "text": "Daily Summary for {{$now.format('yyyy-MM-dd')}}\n\nTotal Sessions: {{$json[\"totalSessions\"]}}\nTotal Messages: {{$json[\"totalMessages\"]}}\nNew Chatbots: {{$json[\"newChatbots\"]}}\nTop Chatbot: {{$json[\"topChatbot\"]}}\n\nLog in to ChatBot AI to see full analytics.",
+        "options": {}
+      },
+      "id": "send-report",
+      "name": "Send Daily Report",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [680, 300]
+    }
+  ],
+  "connections": {
+    "Daily 8AM Trigger": {
+      "main": [[{"node": "Fetch Daily Stats", "type": "main", "index": 0}]]
+    },
+    "Fetch Daily Stats": {
+      "main": [[{"node": "Send Daily Report", "type": "main", "index": 0}]]
+    }
+  },
+  "active": true,
+  "settings": { "executionOrder": "v1" }
+}

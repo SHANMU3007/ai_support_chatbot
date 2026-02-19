@@ -1,0 +1,84 @@
+# ──────────────────────────────────────────────
+# Python / Backend
+# ──────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+.env
+.env.*
+!.env.example
+*.log
+*.pot
+*.pyc
+instance/
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# ──────────────────────────────────────────────
+# Node / Frontend / Embed
+# ──────────────────────────────────────────────
+node_modules/
+.next/
+out/
+dist/
+build/
+.turbo/
+.vercel/
+*.tsbuildinfo
+next-env.d.ts
+.pnp/
+.pnp.js
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ──────────────────────────────────────────────
+# Docker / Infrastructure
+# ──────────────────────────────────────────────
+.docker/
+
+# ──────────────────────────────────────────────
+# Database / Secrets
+# ──────────────────────────────────────────────
+*.sqlite
+*.db
+*.dump
+*.sql.gz
+
+# ──────────────────────────────────────────────
+# OS
+# ──────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ──────────────────────────────────────────────
+# IDE
+# ──────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ──────────────────────────────────────────────
+# Misc
+# ──────────────────────────────────────────────
+*.bak
+*.tmp
