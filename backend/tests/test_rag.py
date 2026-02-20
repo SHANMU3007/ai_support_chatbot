@@ -22,7 +22,7 @@ async def test_stream_response_returns_chunks():
     with (
         patch.object(service.embedding_svc, "embed_text", side_effect=_fake_embed),
         patch.object(service.chroma_svc, "query", side_effect=_fake_query),
-        patch.object(service.claude_svc, "stream", side_effect=_fake_stream),
+        patch.object(service.ai_engine, "stream", side_effect=_fake_stream),
     ):
         result = []
         async for chunk in service.stream_response(
@@ -53,7 +53,7 @@ async def test_stream_response_empty_context():
     with (
         patch.object(service.embedding_svc, "embed_text", side_effect=_fake_embed),
         patch.object(service.chroma_svc, "query", side_effect=_fake_query),
-        patch.object(service.claude_svc, "stream", side_effect=_fake_stream),
+        patch.object(service.ai_engine, "stream", side_effect=_fake_stream),
     ):
         result = []
         async for chunk in service.stream_response(

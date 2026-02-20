@@ -1,5 +1,5 @@
 """
-Prompt Builder – constructs the system prompt for the Claude API.
+Prompt Builder – constructs the system prompt for the AI engine.
 """
 
 SYSTEM_TEMPLATE = """\

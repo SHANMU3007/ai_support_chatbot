@@ -1,6 +1,6 @@
 # NL2SQL Examples
 
-The analytics dashboard includes a natural-language query box powered by Claude + SQL.
+The analytics dashboard includes a natural-language query box powered by Groq (llama-3.3-70b-versatile) + SQL.
 These are example questions you can ask, along with the SQL that gets generated.
 
 ---
@@ -126,7 +126,7 @@ GROUP BY c.id, c.name;
 
 ## Tips
 
-- Questions are interpreted by Claude, so natural phrasing works well.
+- Questions are interpreted by the AI engine, so natural phrasing works well.
 - Only `SELECT` queries are executed; mutations are blocked.
 - Your `user_id` is always automatically included in the WHERE clause for security.
 - Results are shown in a table with the generated SQL visible below.

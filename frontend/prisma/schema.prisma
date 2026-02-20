@@ -71,6 +71,7 @@ model Chatbot {
   welcomeMessage String        @default("Hi! How can I help you today?")
   language       String        @default("en")
   isActive       Boolean       @default(true)
+  telegramToken  String?
   documents      Document[]
   sessions       ChatSession[]
   createdAt      DateTime      @default(now())

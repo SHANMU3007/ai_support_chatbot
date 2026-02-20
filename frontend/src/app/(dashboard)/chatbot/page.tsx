@@ -50,11 +50,8 @@ export default async function ChatbotsPage() {
           {chatbots.map((bot) => (
             <div key={bot.id} className="bg-white rounded-xl border p-6 hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between mb-4">
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
-                  style={{ backgroundColor: bot.primaryColor }}
-                >
-                  {bot.name.charAt(0)}
+                <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold bg-black shadow-sm">
+                  {bot.name.charAt(0).toUpperCase()}
                 </div>
                 <Badge variant={bot.isActive ? "default" : "secondary"}>
                   {bot.isActive ? "Active" : "Inactive"}

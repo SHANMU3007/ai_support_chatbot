@@ -1,0 +1,136 @@
+{
+  "name": "Telegram Bot – SupportIQ",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message"],
+        "additionalFields": {}
+      },
+      "id": "telegram-trigger",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot API"
+        }
+      },
+      "webhookId": "telegram-supportiq"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-message-exists",
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "filter-node",
+      "name": "Has Text Message?",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/chat/telegram",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chatbot_id: \"YOUR_CHATBOT_ID_HERE\", session_id: \"tg_\" + String($json.message.chat.id), message: $json.message.text, visitor_id: \"telegram_\" + String($json.message.from.id), history: [] }) }}"
+      },
+      "id": "http-request",
+      "name": "Send to SupportIQ Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.reply }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "telegram-send",
+      "name": "Reply on Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [850, 300],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Has Text Message?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Text Message?": {
+      "main": [
+        [
+          {
+            "node": "Send to SupportIQ Backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to SupportIQ Backend": {
+      "main": [
+        [
+          {
+            "node": "Reply on Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1
+}

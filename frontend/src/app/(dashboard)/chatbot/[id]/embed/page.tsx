@@ -81,7 +81,7 @@ export default async function EmbedPage({ params }: Props) {
           <EmbedCodeBlock code={`${appUrl}/chat/${chatbot.id}`} language="text" />
         </div>
 
-        <div className="bg-indigo-50 rounded-xl border border-indigo-200 p-6">
+        <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
           <h2 className="font-semibold mb-2">WordPress / Shopify</h2>
           <p className="text-sm text-gray-600">
             In WordPress, use a Custom HTML widget in the Footer. In Shopify, go to{" "}

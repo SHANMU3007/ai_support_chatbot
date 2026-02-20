@@ -35,10 +35,10 @@ Browser / Customer Website
        │
        ▼
 ┌──────────────┐
-│  Anthropic   │
-│  Claude API  │
-│(claude-son.. │
-│   -4-6)      │
+│   Groq LPU   │
+│   API        │
+│(llama-3.3-   │
+│  70b)        │
 └──────────────┘
 
 Redis ←── BullMQ (queued ingestion jobs, future)
@@ -55,7 +55,7 @@ n8n ←── Webhooks from Next.js API routes
 | UI components | shadcn/ui + Tailwind CSS | Accessible, composable, no runtime overhead |
 | Auth | NextAuth.js + Prisma Adapter | Google OAuth + email magic links, session management |
 | Database ORM | Prisma | Type-safe schema migrations and queries |
-| AI model | Anthropic Claude | Excellent long-context, streaming, safety |
+| AI model | Groq · llama-3.3-70b-versatile | Ultra-fast LPU inference, generous free tier, streaming |
 | Vector DB | ChromaDB | Simple HTTP API, cosine similarity, per-chatbot collections |
 | Embeddings | sentence-transformers `all-MiniLM-L6-v2` | Fast, accurate, runs on CPU |
 | Backend | FastAPI | Async Python, native SSE, Pydantic validation |
@@ -75,7 +75,7 @@ n8n ←── Webhooks from Next.js API routes
    a. Embeds the message with sentence-transformers
    b. Queries ChromaDB for top-5 similar chunks (cosine similarity)
    c. Builds a system prompt with the retrieved context
-   d. Streams Claude API response via SSE
+   d. Streams Groq API response via SSE
 6. Next.js pipes the SSE stream back to the browser
 7. Next.js saves the assistant reply to PostgreSQL
 8. If the message triggers escalation, a webhook fires to n8n

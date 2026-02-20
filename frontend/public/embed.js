@@ -6,9 +6,21 @@
 (function () {
   "use strict";
 
-  var CHAT_BASE_URL = window.ChatBotAIConfig && window.ChatBotAIConfig.baseUrl
-    ? window.ChatBotAIConfig.baseUrl
-    : "";
+  var currentScript = document.currentScript || (function() {
+    var scripts = document.getElementsByTagName('script');
+    return scripts[scripts.length - 1];
+  })();
+
+  var CHAT_BASE_URL = "";
+  if (currentScript && currentScript.src) {
+    try {
+      var url = new URL(currentScript.src);
+      CHAT_BASE_URL = url.origin;
+    } catch(e) {}
+  }
+  if (!CHAT_BASE_URL && window.ChatBotAIConfig && window.ChatBotAIConfig.baseUrl) {
+    CHAT_BASE_URL = window.ChatBotAIConfig.baseUrl;
+  }
 
   var botId = document.currentScript
     ? document.currentScript.getAttribute("data-bot-id")
@@ -24,9 +36,7 @@
     return;
   }
 
-  var primaryColor = document.currentScript
-    ? document.currentScript.getAttribute("data-color") || "#6366f1"
-    : "#6366f1";
+  var primaryColor = "#000000";
 
   var buttonSize = 56;
   var isOpen = false;
@@ -43,7 +53,7 @@
     "width:" + buttonSize + "px",
     "height:" + buttonSize + "px",
     "border-radius:50%",
-    "background:" + primaryColor,
+    "background:#000000",
     "border:none",
     "cursor:pointer",
     "box-shadow:0 4px 14px rgba(0,0,0,0.25)",

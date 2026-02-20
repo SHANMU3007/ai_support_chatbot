@@ -1,6 +1,6 @@
 # AI Customer Support Chatbot SaaS Platform
 
-A full-stack, multi-tenant SaaS platform where any business can upload their knowledge base (FAQs, PDFs, DOCX files, or website URLs) and instantly get a branded, embeddable AI chatbot powered by Claude with RAG (Retrieval-Augmented Generation). The chatbot can be dropped onto any external website with a single `<script>` tag.
+A full-stack, multi-tenant SaaS platform where any business can upload their knowledge base (FAQs, PDFs, DOCX files, or website URLs) and instantly get a branded, embeddable AI chatbot powered by **Groq** (llama-3.3-70b-versatile) with RAG (Retrieval-Augmented Generation). The chatbot can be dropped onto any external website with a single `<script>` tag.
 
 ---
 
@@ -12,7 +12,7 @@ A full-stack, multi-tenant SaaS platform where any business can upload their kno
 4. [Frontend — Next.js 14 Dashboard](#4-frontend--nextjs-14-dashboard)
 5. [Backend — FastAPI AI Engine](#5-backend--fastapi-ai-engine)
    - [RAG Service](#rag-service)
-   - [Claude Service](#claude-service)
+   - [AI Engine](#ai-engine)
    - [Embedding Service](#embedding-service)
    - [ChromaDB Service](#chromadb-service)
    - [Document Processor](#document-processor)
@@ -66,8 +66,8 @@ A full-stack, multi-tenant SaaS platform where any business can upload their kno
 │  ┌───────────────────────┐    └───────────────────────────────┘  │
 │  │  n8n (Port 5678)      │                                       │
 │  │  - Webhooks           │    ┌───────────────────────────────┐  │
-│  │  - Email alerts       │    │  Anthropic Claude API         │  │
-│  │  - CRM integration    │    │  (claude-sonnet-4-6)          │  │
+│  │  - Email alerts       │    │  Groq Inference API           │  │
+│  │  - CRM integration    │    │  (llama-3.3-70b-versatile)    │  │
 │  └───────────────────────┘    └───────────────────────────────┘  │
 └───────────────────────────────────────────────────────────────────┘
 ```
@@ -81,7 +81,7 @@ A full-stack, multi-tenant SaaS platform where any business can upload their kno
 | Frontend | Next.js 14 (App Router) + TypeScript | Server components, streaming, file-based routing |
 | Styling | Tailwind CSS + shadcn/ui | Utility-first CSS, accessible pre-built components |
 | Backend | Python FastAPI | Async-native, perfect for streaming AI responses |
-| AI Model | Anthropic Claude (`claude-sonnet-4-6`) | Best-in-class instruction following and safety |
+| AI Model | Groq (`llama-3.3-70b-versatile`) | Ultra-fast LPU inference, 14,400 free req/day |
 | Embeddings | `sentence-transformers` (`all-MiniLM-L6-v2`) | Fast, local, no API cost for embeddings |
 | Vector DB | ChromaDB | Simple, self-hosted, persistent vector store |
 | Relational DB | PostgreSQL 15 + Prisma ORM | Structured data, migrations, type-safe queries |
@@ -135,10 +135,10 @@ EmbeddingService → embed the question → float[] vector
 ChromaDB → cosine similarity search → top-5 relevant chunks
         │
         ▼
-ClaudeService → system prompt (chunks as context) + conversation history
+AIEngine → system prompt (chunks as context) + conversation history
         │
         ▼
-Anthropic API → Claude streams tokens back
+Groq API → llama-3.3-70b streams tokens back
         │
         ▼
 FastAPI → Server-Sent Events (SSE) stream → Browser
@@ -193,7 +193,7 @@ This keeps secrets (database credentials, API keys) server-side and prevents dir
 **Location:** `backend/`  
 **Port:** 8000
 
-The FastAPI backend is the pure AI engine. It handles all compute-heavy work: embedding generation, vector search, document parsing, and Claude streaming.
+The FastAPI backend is the pure AI engine. It handles all compute-heavy work: embedding generation, vector search, document parsing, and Groq LLM streaming.
 
 ### Routers
 
@@ -210,34 +210,34 @@ The FastAPI backend is the pure AI engine. It handles all compute-heavy work: em
 
 **File:** `app/services/rag_service.py`
 
-RAG (Retrieval-Augmented Generation) is the core AI pattern this platform uses. It solves the problem of Claude not having knowledge of your specific business.
+RAG (Retrieval-Augmented Generation) is the core AI pattern this platform uses. It solves the problem of the AI model not having knowledge of your specific business.
 
 **How it works:**
 1. The incoming user question is converted to a vector (embedding).
 2. ChromaDB finds the 5 most semantically similar chunks from the chatbot's knowledge base.
-3. Those chunks are injected into Claude's system prompt as `Context`.
-4. Claude answers using only that context — it cannot hallucinate facts from outside it.
+3. Those chunks are injected into the AI engine's system prompt as `Context`.
+4. The AI answers using only that context — it cannot hallucinate facts from outside it.
 
 ```
 Question → embed → [0.23, -0.11, 0.87, ...] → ChromaDB search
 → ["We're open 9-5 EST", "Returns accepted within 30 days", ...]
-→ Claude: "Based on the context: We're open 9am–5pm EST..."
+→ AI: "Based on the context: We're open 9am–5pm EST..."
 ```
 
 ---
 
-### Claude Service
+### AI Engine
 
-**File:** `app/services/claude_service.py`
+**File:** `app/services/ai_engine.py`
 
-Wraps Anthropic's Python SDK. Uses **async streaming** so tokens arrive at the browser as Claude generates them — no waiting for the full response.
+Wraps the Groq Python SDK. Uses **async streaming** so tokens arrive at the browser as the model generates them — no waiting for the full response.
 
 Key behaviours:
-- Uses `claude-sonnet-4-6` model.
+- Uses `llama-3.3-70b-versatile` model via Groq LPU hardware (~500 tokens/sec).
 - Keeps the last **6 conversation turns** in the message history for context continuity.
-- System prompt strictly instructs Claude to use only the provided context, preventing hallucination.
+- System prompt strictly instructs the model to use only the provided context, preventing hallucination.
 - Max output: **2048 tokens** per response (configurable).
-- Streams via `AsyncAnthropic.messages.stream()` → yields text chunks → SSE events.
+- Streams via `AsyncGroq.chat.completions.create(stream=True)` → yields text chunks → SSE events.
 
 ---
 
@@ -307,10 +307,10 @@ The scraped text is then chunked and embedded exactly like an uploaded document.
 
 **File:** `app/services/language_service.py`
 
-Provides automatic language detection and translation using Claude:
+Provides automatic language detection and translation using the Groq AI engine:
 
 - **`detect_language(text)`** — uses `langdetect` library to return the ISO 639-1 code (`"en"`, `"fr"`, `"de"`, etc.).
-- **`translate(text, target_lang)`** — asks Claude to translate text and return only the translated output.
+- **`translate(text, target_lang)`** — uses Groq to translate text and return only the translated output.
 
 This enables multilingual support: a visitor can write in French, the system detects it, processes in English, and translates the response back.
 
@@ -323,11 +323,11 @@ This enables multilingual support: a visitor can write in French, the system det
 Lets business owners query their own analytics data in plain English:
 
 **Example:** *"How many conversations did I have this week?"*  
-→ Claude generates: `SELECT COUNT(*) FROM chat_sessions WHERE chatbot_id IN (...) AND started_at >= NOW() - INTERVAL '7 days'`  
+→ AI generates: `SELECT COUNT(*) FROM chat_sessions WHERE chatbot_id IN (...) AND started_at >= NOW() - INTERVAL '7 days'`  
 → Executes against PostgreSQL → returns results as JSON
 
 **Safety measures:**
-- Claude is given a schema hint with only the permitted tables.
+- The AI engine is given a schema hint with only the permitted tables.
 - A regex check enforces that only `SELECT` statements are executed — no `INSERT`, `UPDATE`, `DELETE`, or `DROP`.
 - Queries are always scoped to the requesting `user_id`.
 
@@ -505,8 +505,8 @@ The Next.js frontend and FastAPI backend run **outside** Docker in development (
 Create a `.env` file in the root (copied from `.env.example`):
 
 ```env
-# ── Anthropic ─────────────────────────────────────────────────────
-ANTHROPIC_API_KEY=sk-ant-...
+# ── GROQ (AI Inference Engine) ─────────────────────────────────────
+GROQ_API_KEY=gsk_...
 
 # ── Database ──────────────────────────────────────────────────────
 POSTGRES_USER=chatbot
@@ -546,7 +546,7 @@ N8N_WEBHOOK_URL=http://localhost:5678
 - Docker Desktop
 - Node.js 18+
 - Python 3.11+
-- An Anthropic API key ([get one here](https://console.anthropic.com))
+- A Groq API key ([get one free here](https://console.groq.com/keys))
 
 ### 1. Clone & Configure
 
@@ -554,7 +554,7 @@ N8N_WEBHOOK_URL=http://localhost:5678
 git clone https://github.com/yourusername/ai-support-chatbot.git
 cd ai-support-chatbot
 cp .env.example .env
-# Edit .env and set ANTHROPIC_API_KEY and NEXTAUTH_SECRET
+# Edit .env and set GROQ_API_KEY and NEXTAUTH_SECRET
 ```
 
 ### 2. Start Infrastructure (Docker)

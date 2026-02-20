@@ -1,6 +1,6 @@
 # n8n Workflows
 
-Four pre-built n8n workflows for the ChatBot AI platform.
+Five pre-built n8n workflows for the ChatBot AI platform.
 
 ## Import Instructions
 
@@ -88,3 +88,56 @@ After importing, each workflow will have a webhook URL like:
 `http://localhost:5678/webhook/{path}`
 
 Set `N8N_WEBHOOK_URL=http://n8n:5678/webhook` in your `.env` and the Next.js app will automatically POST to the correct paths.
+
+---
+
+### `telegram-bot.json`
+**Trigger:** Telegram Bot (incoming messages)  
+**Action:** Forwards user messages to the SupportIQ backend (`/chat/telegram` endpoint), then sends the AI response back to the Telegram user.  
+
+#### Setup Instructions:
+
+1. **Create a Telegram Bot:**
+   - Open Telegram and search for `@BotFather`
+   - Send `/newbot` and follow the prompts to create a bot
+   - Copy the **Bot Token** (e.g. `7123456789:AAH...`)
+
+2. **Add Telegram Credentials in n8n:**
+   - In n8n, go to **Settings → Credentials → Add Credential**
+   - Choose **Telegram API**
+   - Paste your Bot Token
+   - Save it
+
+3. **Import the Workflow:**
+   - Go to **Workflows → Import from File**
+   - Import `telegram-bot.json`
+
+4. **Configure the Workflow:**
+   - Open the workflow and click on the **"Send to SupportIQ Backend"** node
+   - In the JSON body, replace `YOUR_CHATBOT_ID_HERE` with your actual chatbot ID
+     - You can find this in your SupportIQ dashboard URL: `/chatbot/[THIS-IS-YOUR-ID]`
+   - Update the URL if your backend is not on `localhost:8000`
+
+5. **Activate the Workflow:**
+   - Click the **Activate** toggle in the top-right corner
+   - Your Telegram bot is now live!
+
+**API Endpoint Used:** `POST /chat/telegram`  
+**Request Body:**
+```json
+{
+  "chatbot_id": "your-chatbot-id",
+  "session_id": "tg_123456789",
+  "message": "What services do you offer?",
+  "visitor_id": "telegram_987654321",
+  "history": []
+}
+```
+**Response:**
+```json
+{
+  "reply": "We offer hair styling, facials, spa treatments...",
+  "chatbot_id": "your-chatbot-id",
+  "session_id": "tg_123456789"
+}
+```

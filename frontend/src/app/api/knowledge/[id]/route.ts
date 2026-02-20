@@ -24,7 +24,7 @@ export async function DELETE(_req: NextRequest, { params }: Props) {
 
   // Also delete from ChromaDB via backend
   const fastapiUrl = process.env.FASTAPI_URL || "http://localhost:8000";
-  fetch(`${fastapiUrl}/ingest/document/${params.id}`, { method: "DELETE" }).catch(console.error);
+  fetch(`${fastapiUrl}/ingest/document/${document.chatbotId}/${params.id}`, { method: "DELETE" }).catch(console.error);
 
   return NextResponse.json({ success: true });
 }

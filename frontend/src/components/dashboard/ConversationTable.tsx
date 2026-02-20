@@ -51,12 +51,9 @@ export function ConversationTable({ sessions }: Props) {
             <td className="px-4 py-3">
               <Link
                 href={`/conversations/${session.id}`}
-                className="flex items-center gap-2 text-sm font-medium text-indigo-600 hover:underline"
+                className="flex items-center gap-2 text-sm font-medium text-black hover:underline"
               >
-                <div
-                  className="w-5 h-5 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: session.chatbot.primaryColor }}
-                />
+                <div className="w-5 h-5 rounded-full flex-shrink-0 bg-black" />
                 {session.chatbot.name}
               </Link>
             </td>

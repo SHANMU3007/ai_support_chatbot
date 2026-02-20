@@ -60,13 +60,8 @@ export default async function ConversationDetailPage({ params }: Props) {
               className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm ${
                 msg.role === "USER"
                   ? "bg-gray-100 text-gray-900"
-                  : "text-white"
+                  : "bg-black text-white"
               }`}
-              style={
-                msg.role === "ASSISTANT"
-                  ? { backgroundColor: chatSession.chatbot.primaryColor }
-                  : {}
-              }
             >
               <p>{msg.content}</p>
               <div className="flex items-center gap-2 mt-1 opacity-60 text-xs">

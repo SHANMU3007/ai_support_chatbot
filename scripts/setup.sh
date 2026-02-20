@@ -38,7 +38,7 @@ docker-compose build
 
 echo ""
 echo "Setup complete! Next steps:"
-echo "  1. Edit .env and set ANTHROPIC_API_KEY, NEXTAUTH_SECRET, GOOGLE_CLIENT_ID/SECRET"
+echo "  1. Edit .env and set GROQ_API_KEY, NEXTAUTH_SECRET, GOOGLE_CLIENT_ID/SECRET"
 echo "  2. Run: make dev"
 echo "  3. In another terminal: make migrate && make seed"
 echo "  4. Open http://localhost:3000"

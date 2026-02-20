@@ -1,12 +1,12 @@
 """
-NL2SQL Service – converts a natural-language question to SQL using Claude,
+NL2SQL Service – converts a natural-language question to SQL using Groq,
 executes it against PostgreSQL, and returns structured results.
 """
 from typing import Any, Dict
 import re
 import logging
 
-import anthropic
+from groq import AsyncGroq
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -41,24 +41,22 @@ Respond with ONLY the SQL query, no explanation, no markdown."""
 
 class NL2SQLService:
     def __init__(self):
-        self.client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+        self.client = AsyncGroq(api_key=settings.GROQ_API_KEY)
 
     async def query(
         self, question: str, user_id: str, db: AsyncSession
     ) -> Dict[str, Any]:
-        # 1. Generate SQL via Claude
+        # 1. Generate SQL via Groq
         prompt = _PROMPT.format(
             schema=_SCHEMA_HINT, question=question, user_id=user_id
         )
-        message = await self.client.messages.create(
-            model=settings.CLAUDE_MODEL,
+        response = await self.client.chat.completions.create(
+            model=settings.GROQ_MODEL,
             max_tokens=512,
             messages=[{"role": "user", "content": prompt}],
         )
-        content_block = message.content[0]
-        if not isinstance(content_block, anthropic.types.TextBlock):
-            return {"error": "Unexpected response from Claude.", "sql": "", "rows": []}
-        raw_sql = content_block.text.strip()
+        raw_sql = response.choices[0].message.content or ""
+        raw_sql = raw_sql.strip()
 
         # Strip markdown code fences if present
         sql = re.sub(r"^```[a-z]*\n?", "", raw_sql, flags=re.IGNORECASE)

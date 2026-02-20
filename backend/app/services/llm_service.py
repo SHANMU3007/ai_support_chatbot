@@ -1,9 +1,11 @@
 """
-Groq Service – wraps the Groq Python SDK for streaming chat.
-Uses llama-3.3-70b-versatile on Groq LPU hardware (fastest free inference).
+LLM Service – Groq-backed streaming chat (llama-3.3-70b-versatile).
+Kept as a separate service for any code that imports LLMService directly.
 """
-from typing import AsyncIterator, Dict, List
+from __future__ import annotations
+
 import logging
+from typing import AsyncIterator, Dict, List
 
 from groq import AsyncGroq
 
@@ -20,8 +22,7 @@ Context:
 {context}"""
 
 
-class AIEngineCompat:
-    """Compatibility alias – use ai_engine.AIEngine for new code."""
+class LLMService:
 
     def __init__(self):
         self.client = AsyncGroq(api_key=settings.GROQ_API_KEY)
@@ -34,7 +35,6 @@ class AIEngineCompat:
     ) -> AsyncIterator[str]:
         system_prompt = _SYSTEM_TEMPLATE.format(context=context or "No context available.")
 
-        # Build messages: system + last 6 history turns + current message
         messages = [{"role": "system", "content": system_prompt}]
         for turn in history[-6:]:
             if turn.get("role") in ("user", "assistant"):
@@ -53,5 +53,5 @@ class AIEngineCompat:
                 if delta:
                     yield delta
         except Exception as exc:
-            logger.exception("Groq API error")
+            logger.exception("Groq LLM error")
             yield f"\n[Error: {exc}]"

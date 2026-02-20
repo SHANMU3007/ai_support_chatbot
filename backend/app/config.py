@@ -5,8 +5,9 @@ from typing import List
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    # Anthropic
-    ANTHROPIC_API_KEY: str = ""
+    # Groq
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
 
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://chatbot:chatbot_pass@localhost:5432/chatbot_db"
@@ -20,6 +21,7 @@ class Settings(BaseSettings):
 
     # App
     FASTAPI_URL: str = "http://localhost:8000"
+    NEXTJS_URL: str = "http://localhost:3000"
     ALLOWED_ORIGINS: List[str] = ["http://localhost:3000"]
     LOG_LEVEL: str = "INFO"
 
@@ -27,7 +29,6 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
 
     # Model
-    CLAUDE_MODEL: str = "claude-sonnet-4-6"
     MAX_TOKENS: int = 2048
     CONTEXT_CHUNKS: int = 5
 

@@ -20,7 +20,7 @@ export default function CreateChatbotPage() {
     businessName: "",
     description: "",
     systemPrompt: "",
-    primaryColor: "#6366f1",
+    primaryColor: "#000000",
     welcomeMessage: "Hi! How can I help you today?",
     language: "en",
   });
@@ -40,9 +40,13 @@ export default function CreateChatbotPage() {
       const data = await res.json();
       if (res.ok) {
         router.push(`/chatbot/${data.id}/training`);
+      } else {
+        alert("Failed to create chatbot: " + (data.error || "Unknown error"));
+        console.error("Creation failed", data);
       }
     } catch (error) {
       console.error(error);
+      alert("Network error: Could not reach the server.");
     } finally {
       setLoading(false);
     }

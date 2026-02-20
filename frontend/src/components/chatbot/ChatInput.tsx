@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, KeyboardEvent } from "react";
-import { Send } from "lucide-react";
+import { Send, Sparkles } from "lucide-react";
 
 interface Props {
   onSend: (message: string) => void;
@@ -39,30 +39,33 @@ export function ChatInput({ onSend, disabled, primaryColor }: Props) {
   };
 
   return (
-    <div className="border-t p-3 bg-white">
-      <div className="flex items-end gap-2 bg-gray-50 rounded-xl border p-2">
+    <div className="border-t border-gray-100 p-3 bg-white/90 backdrop-blur-sm">
+      <div className="flex items-end gap-2 bg-gray-50/80 rounded-2xl border border-gray-200 p-2 transition-all focus-within:border-gray-300 focus-within:shadow-sm focus-within:bg-white">
         <textarea
           ref={textareaRef}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
           onInput={handleInput}
-          placeholder="Type a message... (Enter to send)"
+          placeholder="Ask me anything... ✨"
           disabled={disabled}
           rows={1}
-          className="flex-1 bg-transparent text-sm resize-none outline-none min-h-[28px] max-h-[120px] placeholder:text-gray-400"
+          className="flex-1 bg-transparent text-sm resize-none outline-none min-h-[28px] max-h-[120px] placeholder:text-gray-400 py-1 px-2"
         />
         <button
           onClick={handleSend}
           disabled={disabled || !value.trim()}
-          className="w-8 h-8 rounded-lg flex items-center justify-center text-white transition-opacity disabled:opacity-40 flex-shrink-0"
-          style={{ backgroundColor: primaryColor }}
+          className="w-9 h-9 flex items-center justify-center text-white transition-all disabled:opacity-30 disabled:scale-95 flex-shrink-0 hover:scale-105 active:scale-95 shadow-sm rounded-sm bg-black"
         >
-          <Send className="h-4 w-4" />
+          {disabled ? (
+            <Sparkles className="h-4 w-4 animate-pulse" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
         </button>
       </div>
-      <p className="text-center text-xs text-gray-400 mt-2">
-        Powered by Claude AI
+      <p className="text-center text-[10px] text-gray-400 mt-2 select-none">
+        Powered by <span className="font-medium">SupportIQ</span> · Smart Answers, Instantly
       </p>
     </div>
   );

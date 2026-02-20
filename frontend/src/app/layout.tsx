@@ -7,9 +7,9 @@ import { Toaster } from "@/components/ui/toaster";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "AI Support Chatbot - Powered by Claude",
+  title: "SupportIQ — Intelligent Customer Support, Instantly",
   description:
-    "Add an AI-powered customer support chatbot to your website in minutes. Upload your FAQs and let Claude handle the rest.",
+    "Add a smart support chatbot to your website in minutes. Upload your FAQs and let SupportIQ handle the rest — intelligent, instant, always on.",
 };
 
 export default function RootLayout({

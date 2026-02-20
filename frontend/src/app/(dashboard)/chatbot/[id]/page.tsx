@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Settings, BookOpen, Code, Play, MessageSquare } from "lucide-react";
+import { KnowledgeBaseSummary } from "@/components/chatbot/KnowledgeBaseSummary";
+import { Document } from "@/types/chatbot";
 
 interface Props {
   params: { id: string };
@@ -37,11 +39,8 @@ export default async function ChatbotDetailPage({ params }: Props) {
         </Link>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm"
-              style={{ backgroundColor: chatbot.primaryColor }}
-            >
-              {chatbot.name.charAt(0)}
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm bg-black shadow-sm">
+              {chatbot.name.charAt(0).toUpperCase()}
             </div>
             <h1 className="text-2xl font-bold">{chatbot.name}</h1>
             <Badge variant={chatbot.isActive ? "default" : "secondary"}>
@@ -111,33 +110,10 @@ export default async function ChatbotDetailPage({ params }: Props) {
             </Button>
           </Link>
         </div>
-        {chatbot.documents.length === 0 ? (
-          <p className="text-sm text-gray-500 text-center py-4">
-            No documents yet.{" "}
-            <Link href={`/chatbot/${params.id}/training`} className="text-indigo-600 hover:underline">
-              Add your first document
-            </Link>
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {chatbot.documents.map((doc) => (
-              <li key={doc.id} className="flex items-center justify-between text-sm">
-                <span className="font-medium">{doc.name}</span>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="text-xs">
-                    {doc.type}
-                  </Badge>
-                  <Badge
-                    variant={doc.status === "DONE" ? "default" : "secondary"}
-                    className="text-xs"
-                  >
-                    {doc.status}
-                  </Badge>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+        <KnowledgeBaseSummary
+          chatbotId={params.id}
+          initialDocuments={chatbot.documents as unknown as Document[]}
+        />
       </div>
     </div>
   );

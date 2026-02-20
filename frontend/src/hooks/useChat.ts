@@ -73,30 +73,84 @@ export function useChat({ botId, language = "en" }: UseChatOptions) {
 
         const reader = res.body!.getReader();
         const decoder = new TextDecoder();
+        let buffer = "";
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
-          const chunk = decoder.decode(value);
-          const lines = chunk.split("\n").filter((l) => l.startsWith("data: "));
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          // Keep the last partial line in the buffer
+          buffer = lines.pop() || "";
 
           for (const line of lines) {
-            const data = JSON.parse(line.slice(6));
-            if (data.text) {
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantMsgId
-                    ? { ...m, content: m.content + data.text }
-                    : m
-                )
-              );
-            }
-            if (data.sessionId && !sessionId) {
-              setSessionId(data.sessionId);
+            const trimmed = line.trim();
+            if (!trimmed.startsWith("data: ")) continue;
+
+            const payload = trimmed.slice(6);
+
+            // Skip the [DONE] marker from FastAPI backend
+            if (payload === "[DONE]") continue;
+
+            try {
+              const data = JSON.parse(payload);
+
+              // Handle both FastAPI format {"content": "..."} and
+              // Next.js fallback format {"text": "..."}
+              const chunk = data.content || data.text || "";
+              if (chunk) {
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantMsgId
+                      ? { ...m, content: m.content + chunk }
+                      : m
+                  )
+                );
+              }
+
+              // Handle done signal from Next.js fallback
+              if (data.done && data.sessionId && !sessionId) {
+                setSessionId(data.sessionId);
+              }
+
+              // Handle session ID from SSE data
+              if (data.sessionId && !sessionId) {
+                setSessionId(data.sessionId);
+              }
+
+              // Handle error from backend
+              if (data.error) {
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantMsgId
+                      ? {
+                          ...m,
+                          content:
+                            "I'm sorry, I encountered an issue. Could you please try again? 😊",
+                        }
+                      : m
+                  )
+                );
+              }
+            } catch {
+              // Skip malformed JSON lines
             }
           }
         }
+
+        // If assistant message is still empty after stream ends, show fallback
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantMsgId && m.content === ""
+              ? {
+                  ...m,
+                  content:
+                    "Hmm, I didn't get a response. Could you try asking again? 🤔",
+                }
+              : m
+          )
+        );
       } catch (error) {
         if ((error as Error).name !== "AbortError") {
           setMessages((prev) =>
@@ -105,7 +159,7 @@ export function useChat({ botId, language = "en" }: UseChatOptions) {
                 ? {
                     ...m,
                     content:
-                      "Sorry, I encountered an error. Please try again.",
+                      "Oops! Something went wrong on my end. Please try again in a moment. 😅",
                   }
                 : m
             )

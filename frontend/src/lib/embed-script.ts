@@ -16,7 +16,7 @@ export function generateEmbedScript(botId: string, color: string, appUrl: string
   // Inject styles
   var style = document.createElement('style');
   style.textContent = [
-    '#chatbot-toggle{position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:' + PRIMARY_COLOR + ';border:none;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.2);z-index:999998;display:flex;align-items:center;justify-content:center;transition:transform 0.2s;}',
+    '#chatbot-toggle{position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:#000000;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.2);z-index:999998;display:flex;align-items:center;justify-content:center;transition:transform 0.2s;}',
     '#chatbot-toggle:hover{transform:scale(1.1);}',
     '#chatbot-iframe-container{position:fixed;bottom:96px;right:24px;width:380px;height:560px;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.2);z-index:999999;transition:opacity 0.3s,transform 0.3s;transform-origin:bottom right;}',
     '#chatbot-iframe-container.hidden{opacity:0;transform:scale(0.9);pointer-events:none;}',

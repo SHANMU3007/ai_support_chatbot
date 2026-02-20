@@ -2,7 +2,7 @@
 RAG Service – orchestrates retrieval-augmented generation.
 1. Embed the incoming question.
 2. Query ChromaDB for relevant chunks.
-3. Stream the Claude response.
+3. Stream the AI response via Groq.
 """
 from typing import AsyncIterator, List, Dict
 import logging
@@ -10,7 +10,7 @@ import logging
 from app.config import settings
 from app.services.embedding_service import EmbeddingService
 from app.services.chroma_service import ChromaService
-from app.services.claude_service import ClaudeService
+from app.services.ai_engine import AIEngine
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ class RagService:
     def __init__(self):
         self.embedding_svc = EmbeddingService()
         self.chroma_svc = ChromaService()
-        self.claude_svc = ClaudeService()
+        self.ai_engine = AIEngine()
 
     async def stream_response(
         self,
@@ -45,8 +45,8 @@ class RagService:
             len(chunks),
         )
 
-        # 2. Stream Claude response
-        async for chunk in self.claude_svc.stream(
+        # 2. Stream AI response
+        async for chunk in self.ai_engine.stream(
             message=message,
             context=context,
             history=history,
