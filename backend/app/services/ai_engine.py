@@ -6,7 +6,7 @@ Handles rate-limit errors by:
   2. Falling back to a smaller / cheaper model
   3. Returning a clear, user-friendly error only as a last resort
 """
-from typing import AsyncIterator, Dict, List, Optional
+from typing import Any, AsyncIterator, Dict, List, Optional, cast
 import asyncio
 import logging
 
@@ -155,7 +155,7 @@ class AIEngine:
         logger.info("Trying model: %s", model)
         stream = await self.client.chat.completions.create(
             model=model,
-            messages=messages,  # type: ignore[arg-type]
+            messages=cast(Any, messages),
             max_tokens=settings.MAX_TOKENS,
             temperature=0.2,
             stream=True,
