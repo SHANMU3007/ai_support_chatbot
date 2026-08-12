@@ -43,11 +43,23 @@ async def _handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id if update.message.from_user else 0
     backend_url = context.bot_data.get("backend_url", "http://localhost:8000")
 
-    # Send "typing" indicator
-    await update.message.chat.send_action("typing")
+    language = context.bot_data.get("language", "en")
+    system_prompt = context.bot_data.get("system_prompt")
 
+    logger.info(
+        "Telegram message from user=%s chat=%s: %s (lang: %s)",
+        user_id, chat_id, user_message[:100], language
+    )
+
+    # Send "typing" indicator
     try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        await update.message.chat.send_action("typing")
+    except Exception:
+        pass  # don't fail on typing indicator errors
+
+    reply = ""
+    try:
+        async with httpx.AsyncClient(timeout=90.0) as client:
             response = await client.post(
                 f"{backend_url}/chat/telegram",
                 json={
@@ -56,29 +68,54 @@ async def _handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "message": user_message,
                     "visitor_id": f"telegram_{user_id}",
                     "history": [],
+                    "language": language,
+                    "system_prompt": system_prompt,
                 },
             )
+
+            logger.info("Backend response status: %s", response.status_code)
 
             if response.status_code == 200:
                 data = response.json()
                 reply = data.get("reply", "Sorry, I couldn't generate a response.")
+                logger.info("Reply length: %d chars", len(reply))
             else:
-                logger.error("Backend returned %s: %s", response.status_code, response.text)
+                logger.error(
+                    "Backend returned %s for chatbot %s: %s",
+                    response.status_code, chatbot_id, response.text[:500],
+                )
                 reply = "😞 I'm having trouble connecting right now. Please try again later."
 
+    except httpx.TimeoutException:
+        logger.error("Timeout calling backend for chatbot %s", chatbot_id)
+        reply = "⏳ My response is taking too long. Please try a shorter question."
     except Exception as exc:
-        logger.exception("Error calling backend for Telegram bot")
+        logger.exception("Error calling backend for Telegram bot (chatbot %s)", chatbot_id)
         reply = "😞 Something went wrong. Please try again in a moment."
 
+    # Ensure reply is not empty
+    if not reply or not reply.strip():
+        reply = "I'm sorry, I couldn't generate a response. Please try again."
+
     # Telegram has a 4096 char limit per message
-    if len(reply) > 4000:
-        for i in range(0, len(reply), 4000):
-            await update.message.reply_text(reply[i : i + 4000])
-    else:
-        await update.message.reply_text(reply)
+    try:
+        if len(reply) > 4000:
+            for i in range(0, len(reply), 4000):
+                await update.message.reply_text(reply[i : i + 4000])
+        else:
+            await update.message.reply_text(reply)
+    except Exception as exc:
+        logger.exception("Failed to send reply to Telegram chat %s", chat_id)
 
 
-async def start_bot(chatbot_id: str, token: str, business_name: str, backend_url: str = "http://localhost:8000"):
+async def start_bot(
+    chatbot_id: str, 
+    token: str, 
+    business_name: str, 
+    backend_url: str = "http://localhost:8000",
+    language: str = "en",
+    system_prompt: str = None,
+):
     """Start a Telegram bot for a specific chatbot using polling."""
     if chatbot_id in _running_bots:
         logger.info("Bot for chatbot %s is already running, restarting...", chatbot_id)
@@ -103,6 +140,8 @@ async def start_bot(chatbot_id: str, token: str, business_name: str, backend_url
             app.bot_data["chatbot_id"] = chatbot_id
             app.bot_data["business_name"] = business_name
             app.bot_data["backend_url"] = backend_url
+            app.bot_data["language"] = language
+            app.bot_data["system_prompt"] = system_prompt
 
             # Register handlers
             app.add_handler(CommandHandler("start", _handle_start))

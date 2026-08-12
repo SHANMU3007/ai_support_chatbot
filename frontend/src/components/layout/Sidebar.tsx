@@ -9,12 +9,15 @@ import {
   BarChart3,
   Zap,
   Settings,
-  Sparkles,
-  Blocks
+  Blocks,
+  Users,
+  AlertCircle,
+  Activity,
+  Shield
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const navItems = [
+const workspaceNavItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/chatbot", label: "Chatbots", icon: Bot },
   { href: "/conversations", label: "Conversations", icon: MessageSquare },
@@ -23,7 +26,14 @@ const navItems = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-export function Sidebar() {
+const adminNavItems = [
+  { href: "/admin", label: "Admin Overview", icon: Shield },
+  { href: "/admin/workspaces", label: "Workspaces", icon: Users },
+  { href: "/admin/followup", label: "Sentiment Queue", icon: AlertCircle },
+  { href: "/admin/health", label: "System Health", icon: Activity },
+];
+
+export function Sidebar({ role }: { role?: "ADMIN" | "WORKSPACE" }) {
   const pathname = usePathname();
 
   return (
@@ -40,30 +50,63 @@ export function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-5 space-y-1">
-        {navItems.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || pathname.startsWith(href + "/");
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200",
-                active
-                  ? "bg-white text-black font-medium shadow-sm"
-                  : "text-gray-400 hover:bg-gray-800 hover:text-white"
-              )}
-            >
-              <Icon
+      <nav className="flex-1 px-3 py-5 space-y-6 overflow-y-auto">
+        {/* Admin Navigation Section */}
+        {role === "ADMIN" && (
+          <div className="space-y-1">
+            <p className="px-3 text-[10px] uppercase font-bold tracking-widest text-purple-400 mb-2">
+              Platform Admin
+            </p>
+            {adminNavItems.map(({ href, label, icon: Icon }) => {
+              const active = pathname === href || (href !== "/admin" && pathname.startsWith(href));
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200",
+                    active
+                      ? "bg-purple-600 text-white font-semibold shadow-sm"
+                      : "text-gray-400 hover:bg-gray-800 hover:text-white"
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </Link>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Workspace Tools Section */}
+        <div className="space-y-1">
+          <p className="px-3 text-[10px] uppercase font-bold tracking-widest text-gray-400 mb-2">
+            Workspace Tools
+          </p>
+          {workspaceNavItems.map(({ href, label, icon: Icon }) => {
+            const active = pathname === href || pathname.startsWith(href + "/");
+            return (
+              <Link
+                key={href}
+                href={href}
                 className={cn(
-                  "h-4 w-4 transition-colors",
-                  active ? "text-black" : "text-gray-500"
+                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200",
+                  active
+                    ? "bg-white text-black font-medium shadow-sm"
+                    : "text-gray-400 hover:bg-gray-800 hover:text-white"
                 )}
-              />
-              {label}
-            </Link>
-          );
-        })}
+              >
+                <Icon
+                  className={cn(
+                    "h-4 w-4 transition-colors",
+                    active ? "text-black" : "text-gray-500"
+                  )}
+                />
+                {label}
+              </Link>
+            );
+          })}
+        </div>
       </nav>
 
       {/* Footer */}

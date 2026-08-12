@@ -2,29 +2,65 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ConversationTable } from "@/components/dashboard/ConversationTable";
+import { Shield } from "lucide-react";
 
 export default async function ConversationsPage() {
   const session = await getServerSession(authOptions);
   const userId = session!.user!.id as string;
 
+  // Failsafe DB role resolution for Admin access
+  const adminEmails = (process.env.ADMIN_EMAILS || "shanmugapatelkani@gmail.com")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+
+  const dbUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true },
+  });
+
+  const userRole = (session?.user as any)?.role || dbUser?.role;
+  const userEmail = session?.user?.email?.toLowerCase();
+  const isAdmin =
+    userRole === "ADMIN" ||
+    (userEmail && adminEmails.includes(userEmail));
+
+  // Admins see all chat sessions across all customer chatbots; Workspace users see only their own.
   const sessions = await prisma.chatSession.findMany({
-    where: { chatbot: { userId } },
+    where: isAdmin ? {} : { chatbot: { userId } },
     include: {
-      chatbot: { select: { name: true, primaryColor: true } },
+      chatbot: {
+        select: {
+          name: true,
+          primaryColor: true,
+          user: { select: { email: true } },
+        },
+      },
       _count: { select: { messages: true } },
       messages: { take: 1, orderBy: { createdAt: "desc" } },
     },
     orderBy: { createdAt: "desc" },
-    take: 50,
+    take: 100,
   });
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Conversations</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          All chat sessions across your chatbots
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900">Conversations</h1>
+            {isAdmin && (
+              <span className="inline-flex items-center gap-1 text-xs font-bold bg-purple-100 text-purple-700 px-2.5 py-0.5 rounded-full border border-purple-200">
+                <Shield className="h-3 w-3" /> Full Admin Access
+              </span>
+            )}
+          </div>
+          <p className="text-gray-500 text-sm mt-1">
+            {isAdmin
+              ? "Platform Admin view: Inspect all visitor conversation sessions across all customer chatbots."
+              : "All chat sessions across your chatbots."}
+          </p>
+        </div>
       </div>
       <div className="bg-white rounded-xl border">
         <ConversationTable sessions={sessions} />

@@ -185,7 +185,7 @@ export default function LandingPage() {
             {[
               {
                 name: "Developer",
-                price: "$0",
+                price: "₹0",
                 desc: "For testing & small projects",
                 features: [
                   "1 active chatbot",
@@ -198,7 +198,7 @@ export default function LandingPage() {
               },
               {
                 name: "Business",
-                price: "$49",
+                price: "₹499",
                 desc: "For growing companies",
                 features: [
                   "5 active chatbots",
@@ -212,7 +212,7 @@ export default function LandingPage() {
               },
               {
                 name: "Enterprise",
-                price: "$199",
+                price: "₹999",
                 desc: "For scale & compliance",
                 features: [
                   "Unlimited chatbots",

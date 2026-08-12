@@ -9,6 +9,7 @@ class NLQueryRequest(BaseModel):
 
 class NLQueryResult(BaseModel):
     sql: str
+    columns: List[str]
     rows: List[Dict[str, Any]]
-    count: int
+    rowCount: int
     error: Optional[str] = None

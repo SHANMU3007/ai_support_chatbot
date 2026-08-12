@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Settings, User, Bell } from "lucide-react";
+import { LogOut, Settings, Bell, Shield, User } from "lucide-react";
 import Link from "next/link";
 
 interface Props {
@@ -18,6 +18,8 @@ interface Props {
     name?: string | null;
     email?: string | null;
     image?: string | null;
+    role?: "ADMIN" | "WORKSPACE";
+    plan?: string;
   };
 }
 
@@ -30,10 +32,21 @@ export function Header({ user }: Props) {
         .toUpperCase()
     : user?.email?.[0].toUpperCase() ?? "U";
 
+  const isDarkAdmin = user?.role === "ADMIN";
+
   return (
     <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
-      <div>
-        {/* Breadcrumb could go here */}
+      <div className="flex items-center gap-3">
+        {/* Role Badge Indicator */}
+        {isDarkAdmin ? (
+          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-700 border border-purple-200">
+            <Shield className="h-3.5 w-3.5" /> Platform Admin Mode
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
+            <User className="h-3.5 w-3.5" /> Product Workspace Mode
+          </span>
+        )}
       </div>
 
       <div className="flex items-center gap-3">
@@ -56,7 +69,7 @@ export function Header({ user }: Props) {
             >
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage src={user?.image ?? ""} alt={user?.name ?? ""} />
-                <AvatarFallback className="rounded-lg bg-black text-white text-xs font-medium">
+                <AvatarFallback className={`rounded-lg text-white text-xs font-medium ${isDarkAdmin ? "bg-purple-700" : "bg-black"}`}>
                   {initials}
                 </AvatarFallback>
               </Avatar>
@@ -65,17 +78,30 @@ export function Header({ user }: Props) {
                   {user?.name || "User"}
                 </p>
                 <p className="text-[10px] text-gray-500 leading-none mt-1">
-                  {(user as any)?.plan || "Free"} Plan
+                  {user?.plan || "Free"} Plan • {user?.role || "WORKSPACE"}
                 </p>
               </div>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52 rounded-xl p-1.5 border-gray-200">
+          <DropdownMenuContent align="end" className="w-56 rounded-xl p-1.5 border-gray-200">
             <div className="px-3 py-2.5">
               <p className="font-medium text-sm text-gray-900">{user?.name || "User"}</p>
               <p className="text-gray-500 text-xs mt-0.5">{user?.email}</p>
             </div>
             <DropdownMenuSeparator className="bg-gray-100" />
+            
+            {isDarkAdmin && (
+              <>
+                <DropdownMenuItem asChild className="rounded-lg cursor-pointer hover:bg-purple-50 text-purple-700 font-medium">
+                  <Link href="/admin" className="flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    Platform Admin Center
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-gray-100" />
+              </>
+            )}
+
             <DropdownMenuItem asChild className="rounded-lg cursor-pointer hover:bg-gray-50">
               <Link href="/settings" className="flex items-center gap-2">
                 <Settings className="h-4 w-4" />
@@ -83,7 +109,7 @@ export function Header({ user }: Props) {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => signOut({ callbackUrl: "/" })}
+              onClick={() => signOut({ callbackUrl: "/login" })}
               className="rounded-lg text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer"
             >
               <LogOut className="mr-2 h-4 w-4" />

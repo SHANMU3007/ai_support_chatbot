@@ -47,9 +47,9 @@ export default async function AccountSettingsPage() {
         </p>
         <div className="mt-4 space-y-2">
           {[
-            { plan: "FREE", price: "$0/mo", features: "1 chatbot, 500 msg/mo" },
-            { plan: "STARTER", price: "$29/mo", features: "5 chatbots, 10K msg/mo" },
-            { plan: "PRO", price: "$99/mo", features: "Unlimited, NL2SQL, n8n" },
+            { plan: "FREE", price: "₹0/mo", features: "1 chatbot, 500 msg/mo" },
+            { plan: "STARTER", price: "₹499/mo", features: "5 chatbots, 10K msg/mo" },
+            { plan: "PRO", price: "₹999/mo", features: "Unlimited, NL2SQL, n8n" },
           ].map((p) => (
             <div
               key={p.plan}

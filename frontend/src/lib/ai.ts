@@ -1,5 +1,6 @@
 import Groq from "groq-sdk";
 import { prisma } from "@/lib/prisma";
+import { scoreSessionSentiment } from "@/lib/sentiment";
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY!,
@@ -96,6 +97,7 @@ STRICT RULES:
             tokens: tokenCount,
           },
         });
+        await scoreSessionSentiment(sessionId);
 
         // Check if escalation needed
         const needsEscalation =

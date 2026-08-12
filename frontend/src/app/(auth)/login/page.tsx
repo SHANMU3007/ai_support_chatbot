@@ -1,30 +1,71 @@
 "use client";
 
-import { signIn } from "next-auth/react";
+import { useSession, signIn, signOut } from "next-auth/react";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Shield, MessageCircle } from "lucide-react";
 
 export default function LoginPage() {
+  const { data: session } = useSession();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [emailSent, setEmailSent] = useState(false);
-  const router = useRouter();
+  const [portal, setPortal] = useState<"admin" | "product">("product");
+
+  if (session) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Switch Account</CardTitle>
+          <CardDescription>
+            You are currently logged in as <strong>{session.user?.email}</strong>.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={() => signOut({ callbackUrl: "/login" })} className="w-full">
+            Sign out and switch account
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const getCallbackUrl = () => {
+    const fallback = portal === "admin" ? "/admin" : "/dashboard";
+    const value = new URLSearchParams(window.location.search).get("callbackUrl");
+    if (!value) return fallback;
+
+    try {
+      const callbackUrl = new URL(value, window.location.origin);
+      return callbackUrl.origin === window.location.origin
+        ? `${callbackUrl.pathname}${callbackUrl.search}${callbackUrl.hash}`
+        : fallback;
+    } catch {
+      return fallback;
+    }
+  };
+
+  const startLogin = async (provider: string, options: Record<string, string>) => {
+    setLoading(true);
+    setError("");
+    await signIn(provider, options);
+  };
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
     try {
+      
       const result = await signIn("email", {
         email,
         redirect: false,
-        callbackUrl: "/dashboard",
+        callbackUrl: getCallbackUrl(),
       });
       if (result?.error) {
         setError("Failed to send login email. Please try again.");
@@ -39,8 +80,7 @@ export default function LoginPage() {
   };
 
   const handleGoogleLogin = async () => {
-    setLoading(true);
-    await signIn("google", { callbackUrl: "/dashboard" });
+    await startLogin("google", { callbackUrl: getCallbackUrl() });
   };
 
   if (emailSent) {
@@ -59,10 +99,19 @@ export default function LoginPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Welcome back</CardTitle>
-        <CardDescription>Sign in to your ChatBot AI account</CardDescription>
+        <CardTitle>{portal === "admin" ? "Platform admin login" : "Product user login"}</CardTitle>
+        <CardDescription>{portal === "admin" ? "Monitor all customer workspaces and service usage." : "Manage your chatbots, conversations, and usage analytics."}</CardDescription>
       </CardHeader>
+      <div className="px-6 grid grid-cols-2 gap-2">
+        <button type="button" onClick={() => setPortal("admin")} className={`rounded-lg border p-3 text-left ${portal === "admin" ? "border-indigo-600 bg-indigo-50" : "border-gray-200"}`}>
+          <Shield className="h-4 w-4 mb-1 text-indigo-600" /><span className="text-sm font-semibold block">Platform Admin</span><span className="text-xs text-gray-500">Service dashboard</span>
+        </button>
+        <button type="button" onClick={() => setPortal("product")} className={`rounded-lg border p-3 text-left ${portal === "product" ? "border-indigo-600 bg-indigo-50" : "border-gray-200"}`}>
+          <MessageCircle className="h-4 w-4 mb-1 text-indigo-600" /><span className="text-sm font-semibold block">Product User</span><span className="text-xs text-gray-500">Your chatbot dashboard</span>
+        </button>
+      </div>
       <CardContent className="space-y-4">
+        {portal === "product" && <div className="rounded-lg bg-gray-50 p-4 text-sm text-gray-600">Sign in to create and edit your chatbot, upload knowledge, review conversations, and monitor usage.</div>}
         <Button
           onClick={handleGoogleLogin}
           variant="outline"
@@ -125,6 +174,11 @@ export default function LoginPage() {
           </Link>
         </p>
       </CardFooter>
+      <div className="px-6 pb-5 text-center">
+        <button type="button" onClick={() => signOut({ callbackUrl: "/login" })} className="text-xs text-gray-500 hover:text-indigo-600 hover:underline">
+          Switch account
+        </button>
+      </div>
     </Card>
   );
 }

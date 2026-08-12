@@ -226,6 +226,8 @@ export default function ChatbotSettingsPage({ params }: Props) {
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
               <option value="en">English</option>
+              <option value="ta">Tamil (தமிழ்)</option>
+              <option value="hi">Hindi (हिन्दी)</option>
               <option value="es">Spanish</option>
               <option value="fr">French</option>
               <option value="de">German</option>

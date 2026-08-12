@@ -11,9 +11,10 @@ export async function GET(_req: NextRequest, { params }: Props) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const chatbot = await prisma.chatbot.findFirst({
-    where: { id: params.id, userId: session.user?.id as string },
-  });
+  const isAdmin = session.user?.role === "ADMIN";
+  const where = isAdmin ? { id: params.id } : { id: params.id, userId: session.user?.id as string };
+
+  const chatbot = await prisma.chatbot.findFirst({ where });
 
   if (!chatbot) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(chatbot);
@@ -23,10 +24,12 @@ export async function PUT(req: NextRequest, { params }: Props) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const isAdmin = session.user?.role === "ADMIN";
+  const where = isAdmin ? { id: params.id } : { id: params.id, userId: session.user?.id as string };
   const body = await req.json();
 
   const chatbot = await prisma.chatbot.updateMany({
-    where: { id: params.id, userId: session.user?.id as string },
+    where,
     data: {
       name: body.name,
       businessName: body.businessName,
@@ -47,9 +50,10 @@ export async function DELETE(_req: NextRequest, { params }: Props) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  await prisma.chatbot.deleteMany({
-    where: { id: params.id, userId: session.user?.id as string },
-  });
+  const isAdmin = session.user?.role === "ADMIN";
+  const where = isAdmin ? { id: params.id } : { id: params.id, userId: session.user?.id as string };
+
+  await prisma.chatbot.deleteMany({ where });
 
   return NextResponse.json({ success: true });
 }

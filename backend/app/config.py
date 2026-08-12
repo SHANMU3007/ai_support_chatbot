@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     # Groq
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    # Smaller, faster model used only for NL2SQL (higher free-tier token quota)
+    GROQ_NL2SQL_MODEL: str = "llama-3.3-70b-versatile"
 
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://chatbot:chatbot_pass@localhost:5432/chatbot_db"
@@ -31,6 +33,7 @@ class Settings(BaseSettings):
     # Model
     MAX_TOKENS: int = 2048
     CONTEXT_CHUNKS: int = 5
+    RAG_MIN_SIMILARITY: float = 0.12
 
 
 settings = Settings()

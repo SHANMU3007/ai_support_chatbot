@@ -5,8 +5,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Settings, BookOpen, Code, Play, MessageSquare } from "lucide-react";
+import { ArrowLeft, Settings, BookOpen, Code, Play, MessageSquare, Shield } from "lucide-react";
 import { KnowledgeBaseSummary } from "@/components/chatbot/KnowledgeBaseSummary";
 import { Document } from "@/types/chatbot";
 
@@ -16,11 +15,13 @@ interface Props {
 
 export default async function ChatbotDetailPage({ params }: Props) {
   const session = await getServerSession(authOptions);
+  const isAdmin = session?.user?.role === "ADMIN";
   const userId = session!.user!.id as string;
 
   const chatbot = await prisma.chatbot.findFirst({
-    where: { id: params.id, userId },
+    where: isAdmin ? { id: params.id } : { id: params.id, userId },
     include: {
+      user: { select: { email: true } },
       _count: { select: { sessions: true, documents: true } },
       documents: { orderBy: { createdAt: "desc" }, take: 5 },
     },
@@ -46,6 +47,11 @@ export default async function ChatbotDetailPage({ params }: Props) {
             <Badge variant={chatbot.isActive ? "default" : "secondary"}>
               {chatbot.isActive ? "Active" : "Inactive"}
             </Badge>
+            {isAdmin && (
+              <span className="text-xs bg-purple-100 text-purple-700 font-bold px-2 py-0.5 rounded-full border border-purple-200">
+                Owner: {chatbot.user.email}
+              </span>
+            )}
           </div>
           <p className="text-gray-500 text-sm mt-1">{chatbot.businessName}</p>
         </div>

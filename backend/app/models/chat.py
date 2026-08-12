@@ -13,6 +13,8 @@ class ChatRequest(BaseModel):
     message: str
     history: List[HistoryMessage] = Field(default_factory=list)
     visitor_id: str = ""
+    language: Optional[str] = "en"
+    system_prompt: Optional[str] = None
 
 
 class ChatResponse(BaseModel):

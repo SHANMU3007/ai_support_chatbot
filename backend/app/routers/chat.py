@@ -31,6 +31,8 @@ async def chat_message(request: ChatRequest):
                 message=request.message,
                 history=history_dicts,
                 visitor_id=request.visitor_id,
+                language=request.language,
+                system_prompt=request.system_prompt,
             ):
                 yield f"data: {json.dumps({'content': chunk})}\n\n"
             yield "data: [DONE]\n\n"
@@ -60,6 +62,8 @@ async def telegram_chat(request: ChatRequest):
             message=request.message,
             history=history_dicts,
             visitor_id=request.visitor_id,
+            language=request.language,
+            system_prompt=request.system_prompt,
         ):
             full_response += chunk
     except Exception as exc:

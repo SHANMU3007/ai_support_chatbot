@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -9,9 +10,14 @@ import { Button } from "@/components/ui/button";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
+
+  if (session?.user?.role === "ADMIN") {
+    redirect("/admin");
+  }
+
   const userId = session!.user!.id as string;
 
-  const [chatbotCount, totalMessages, totalDocuments, recentSessions] = await Promise.all([
+  const [chatbotCount, totalMessages, totalDocuments, recentSessions, followUpCount] = await Promise.all([
     prisma.chatbot.count({ where: { userId } }),
     prisma.message.count({
       where: { session: { chatbot: { userId } } },
@@ -26,6 +32,7 @@ export default async function DashboardPage() {
         messages: { take: 1, orderBy: { createdAt: "desc" } },
       },
     }),
+    prisma.chatSession.count({ where: { chatbot: { userId }, needsFollowUp: true } }),
   ]);
 
   return (
@@ -46,7 +53,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <StatsCard
           title="Total Chatbots"
           value={chatbotCount}
@@ -71,6 +78,14 @@ export default async function DashboardPage() {
           icon={TrendingUp}
           description="New conversations"
         />
+        <Link href="/conversations" className="block">
+          <StatsCard
+            title="Follow-up"
+            value={followUpCount}
+            icon={TrendingUp}
+            description="Unhappy customers"
+          />
+        </Link>
       </div>
 
       {/* Recent activity */}

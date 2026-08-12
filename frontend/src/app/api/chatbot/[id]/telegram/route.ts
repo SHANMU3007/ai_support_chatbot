@@ -40,6 +40,8 @@ export async function POST(req: NextRequest, { params }: Props) {
           chatbot_id: params.id,
           token: token,
           business_name: chatbot.businessName || chatbot.name,
+          language: chatbot.language || "en",
+          system_prompt: chatbot.systemPrompt,
         }),
       });
 

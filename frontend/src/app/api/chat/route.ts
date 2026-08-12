@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
+import { scoreSessionSentiment } from "@/lib/sentiment";
 
 export const runtime = "nodejs";
 
@@ -29,8 +30,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Get or create session
+    // A visitor may only continue a session belonging to this public chatbot.
+    // This prevents a session id from one chatbot being reused against another.
     let session = sessionId
-      ? await prisma.chatSession.findUnique({ where: { id: sessionId } })
+      ? await prisma.chatSession.findFirst({
+          where: { id: sessionId, chatbotId: botId },
+        })
       : null;
 
     const visitorId = crypto.randomUUID().slice(0, 8);
@@ -181,6 +186,7 @@ export async function POST(req: NextRequest) {
                 content: fullResponse,
               },
             });
+            await scoreSessionSentiment(sessionIdForHeader);
           } catch (err) {
             console.error("Failed to save assistant message:", err);
           }

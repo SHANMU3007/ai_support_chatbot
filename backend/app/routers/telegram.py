@@ -18,6 +18,8 @@ class TelegramConnectRequest(BaseModel):
     chatbot_id: str
     token: str
     business_name: str = "Our Business"
+    language: Optional[str] = "en"
+    system_prompt: Optional[str] = None
 
 
 class TelegramDisconnectRequest(BaseModel):
@@ -32,6 +34,8 @@ async def connect_telegram(request: TelegramConnectRequest):
         token=request.token,
         business_name=request.business_name,
         backend_url=settings.FASTAPI_URL,
+        language=request.language or "en",
+        system_prompt=request.system_prompt,
     )
     if success:
         return {"status": "connected", "message": f"Telegram bot started for {request.business_name}"}

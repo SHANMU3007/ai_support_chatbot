@@ -3,7 +3,7 @@ import asyncio
 from playwright.async_api import async_playwright
 
 
-async def test():
+async def inspect_pricing():
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
@@ -64,4 +64,5 @@ async def test():
         await browser.close()
 
 
-asyncio.run(test())
+if __name__ == "__main__":
+    asyncio.run(inspect_pricing())

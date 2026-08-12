@@ -9,6 +9,8 @@ interface Session {
   chatbot: { name: string; primaryColor: string };
   _count: { messages: number };
   messages: { content: string }[];
+  sentiment: "POSITIVE" | "NEUTRAL" | "NEGATIVE" | null;
+  needsFollowUp: boolean;
 }
 
 interface Props {
@@ -41,6 +43,9 @@ export function ConversationTable({ sessions }: Props) {
             Language
           </th>
           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            Sentiment
+          </th>
+          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
             Started
           </th>
         </tr>
@@ -65,6 +70,16 @@ export function ConversationTable({ sessions }: Props) {
               <Badge variant="outline" className="text-xs">
                 {session.language.toUpperCase()}
               </Badge>
+            </td>
+            <td className="px-4 py-3">
+              {session.sentiment ? (
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className={session.sentiment === "NEGATIVE" ? "border-red-300 text-red-700" : session.sentiment === "POSITIVE" ? "border-green-300 text-green-700" : "text-gray-600"}>
+                    {session.sentiment[0] + session.sentiment.slice(1).toLowerCase()}
+                  </Badge>
+                  {session.needsFollowUp && <span className="text-[11px] font-medium text-red-600">Follow up</span>}
+                </div>
+              ) : <span className="text-xs text-gray-400">Pending</span>}
             </td>
             <td className="px-4 py-3 text-xs text-gray-400">
               {formatRelativeTime(session.createdAt)}

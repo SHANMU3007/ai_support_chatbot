@@ -1,6 +1,7 @@
 "use client";
 
 import { useChat } from "@/hooks/useChat";
+import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import { ChatInput } from "./ChatInput";
 import { MessageBubble } from "./MessageBubble";
 import { TypingIndicator } from "./TypingIndicator";
@@ -31,9 +32,24 @@ export function ChatWindow({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [showHeader, setShowHeader] = useState(true);
 
+  // Text-to-Speech
+  const {
+    isSpeaking,
+    currentMessageId,
+    isSupported: ttsSupported,
+    speak,
+    stop: stopSpeaking,
+  } = useTextToSpeech({ language });
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
+
+  // Stop TTS when chat is cleared
+  const handleClearChat = () => {
+    stopSpeaking();
+    clearChat();
+  };
 
   // Show typing indicator when assistant message is empty and loading
   const lastMessage = messages[messages.length - 1];
@@ -61,7 +77,7 @@ export function ChatWindow({
           </div>
           {messages.length > 0 && (
             <button
-              onClick={clearChat}
+              onClick={handleClearChat}
               className="ml-2 p-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
               title="Clear chat"
             >
@@ -82,10 +98,24 @@ export function ChatWindow({
             timestamp: new Date(),
           }}
           primaryColor={primaryColor}
+          isSpeaking={isSpeaking}
+          isCurrentSpeaking={currentMessageId === "welcome"}
+          onSpeak={speak}
+          onStopSpeak={stopSpeaking}
+          ttsSupported={ttsSupported}
         />
 
         {messages.map((msg) => (
-          <MessageBubble key={msg.id} message={msg} primaryColor={primaryColor} />
+          <MessageBubble
+            key={msg.id}
+            message={msg}
+            primaryColor={primaryColor}
+            isSpeaking={isSpeaking}
+            isCurrentSpeaking={currentMessageId === msg.id}
+            onSpeak={speak}
+            onStopSpeak={stopSpeaking}
+            ttsSupported={ttsSupported}
+          />
         ))}
 
         {showTyping && <TypingIndicator primaryColor={primaryColor} />}
@@ -94,7 +124,12 @@ export function ChatWindow({
       </div>
 
       {/* Input */}
-      <ChatInput onSend={sendMessage} disabled={isLoading} primaryColor={primaryColor} />
+      <ChatInput
+        onSend={sendMessage}
+        disabled={isLoading}
+        primaryColor={primaryColor}
+        language={language}
+      />
     </div>
   );
 }

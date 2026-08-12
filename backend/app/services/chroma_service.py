@@ -61,17 +61,61 @@ class ChromaService:
         chatbot_id: str,
         query_embedding: List[float],
         n_results: int = 5,
+        min_similarity: float = 0.0,
     ) -> List[str]:
         try:
             collection = self._get_or_create_collection(chatbot_id)
-            result = collection.query(
-                query_embeddings=[query_embedding],
-                n_results=n_results,
-                include=["documents"],  # type: ignore[list-item]
-            )
+            try:
+                result = collection.query(
+                    query_embeddings=[query_embedding],
+                    n_results=n_results,
+                    include=["documents", "distances"],  # type: ignore[list-item]
+                )
+            except Exception as exc:
+                logger.warning("Chroma query with distances failed, retrying docs-only: %s", exc)
+                result = collection.query(
+                    query_embeddings=[query_embedding],
+                    n_results=n_results,
+                    include=["documents"],  # type: ignore[list-item]
+                )
+
             raw_docs = result.get("documents") or [[]]
+            raw_distances = result.get("distances") or [[]]
             docs = raw_docs[0] if raw_docs else []
-            return [str(d) for d in docs if d]
+            distances = raw_distances[0] if raw_distances else []
+
+            if not distances or min_similarity <= 0:
+                return [str(d) for d in docs if d]
+
+            filtered_docs: List[str] = []
+            for index, doc in enumerate(docs):
+                if not doc:
+                    continue
+                if index >= len(distances) or distances[index] is None:
+                    continue
+
+                similarity = 1.0 - float(distances[index])
+                if similarity >= min_similarity:
+                    filtered_docs.append(str(doc))
+
+            logger.info(
+                "Chroma query chatbot=%s docs=%d filtered=%d min_similarity=%.2f",
+                chatbot_id,
+                len(docs),
+                len(filtered_docs),
+                min_similarity,
+            )
+
+            if not filtered_docs:
+                fallback_docs = [str(d) for d in docs if d][:2]
+                logger.info(
+                    "Chroma query fallback chatbot=%s using top_docs=%d after strict filter",
+                    chatbot_id,
+                    len(fallback_docs),
+                )
+                return fallback_docs
+
+            return filtered_docs
         except Exception as exc:
             logger.warning("ChromaDB query failed: %s", exc)
             return []

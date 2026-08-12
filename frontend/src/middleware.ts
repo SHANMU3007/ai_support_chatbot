@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PROTECTED_PREFIXES = ["/dashboard", "/chatbot", "/conversations", "/analytics"];
+const PROTECTED_PREFIXES = ["/dashboard", "/admin", "/chatbot", "/conversations", "/analytics"];
 
 // Cookie name differs in prod (https) vs dev (http)
 function getSessionCookie(req: NextRequest): string | undefined {

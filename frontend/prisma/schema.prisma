@@ -2,7 +2,8 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -52,6 +53,7 @@ model User {
   name          String?
   image         String?
   plan          Plan      @default(FREE)
+  role          UserRole  @default(WORKSPACE)
   accounts      Account[]
   sessions      Session[]
   chatbots      Chatbot[]
@@ -100,6 +102,11 @@ model ChatSession {
   language  String    @default("en")
   messages  Message[]
   metadata  Json?
+  sentiment Sentiment?
+  sentimentScore Float?
+  sentimentReason String? @db.Text
+  needsFollowUp Boolean @default(false)
+  sentimentUpdatedAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 }
@@ -120,6 +127,17 @@ enum Plan {
   STARTER
   PRO
   ENTERPRISE
+}
+
+enum UserRole {
+  ADMIN
+  WORKSPACE
+}
+
+enum Sentiment {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
 }
 
 enum DocType {

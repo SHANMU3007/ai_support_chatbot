@@ -22,10 +22,13 @@ export async function POST(req: NextRequest) {
     });
 
     if (!res.ok) {
-      return NextResponse.json(
-        { error: "Failed to execute query" },
-        { status: res.status }
-      );
+      // Forward the real error detail from the FastAPI backend
+      let detail = "Failed to execute query";
+      try {
+        const errBody = await res.json();
+        detail = errBody?.detail ?? errBody?.error ?? detail;
+      } catch { /* ignore parse errors */ }
+      return NextResponse.json({ error: detail }, { status: res.status });
     }
 
     const data = await res.json();

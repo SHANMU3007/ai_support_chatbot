@@ -7,7 +7,19 @@ import logging
 
 from app.config import settings
 from app.database import init_db
-from app.routers import chat, ingest, embeddings, health, telegram
+from app.routers import chat, ingest, embeddings, health, telegram, analytics
+
+# Reconfigure stdout/stderr to utf-8 if supported (fixes Windows cp1252 print errors)
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+if hasattr(sys.stderr, "reconfigure"):
+    try:
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 
 logging.basicConfig(
     level=logging.INFO,
@@ -23,10 +35,18 @@ CYN  = "\033[96m"
 BOLD = "\033[1m"
 RST  = "\033[0m"
 
-def _ok(msg: str)  -> None: print(f"  {GRN}✔{RST}  {msg}", flush=True)
-def _wait(msg: str)-> None: print(f"  {YLW}…{RST}  {msg}", flush=True)
-def _fail(msg: str)-> None: print(f"  {RED}✘{RST}  {msg}", flush=True)
-def _hdr(msg: str) -> None: print(f"\n{BOLD}{CYN}{msg}{RST}", flush=True)
+def _safe_print(msg: str) -> None:
+    try:
+        print(msg, flush=True)
+    except UnicodeEncodeError:
+        safe_msg = msg.encode("ascii", errors="replace").decode("ascii")
+        print(safe_msg, flush=True)
+
+def _ok(msg: str)  -> None: _safe_print(f"  {GRN}✔{RST}  {msg}")
+def _wait(msg: str)-> None: _safe_print(f"  {YLW}…{RST}  {msg}")
+def _fail(msg: str)-> None: _safe_print(f"  {RED}✘{RST}  {msg}")
+def _hdr(msg: str) -> None: _safe_print(f"\n{BOLD}{CYN}{msg}{RST}")
+
 
 
 @asynccontextmanager
@@ -65,7 +85,7 @@ async def lifespan(app: FastAPI):
         _fail("ChromaDB unreachable – document search will not work")
 
     # ── 4. Routers ────────────────────────────────────────────────────────────
-    _ok("Routers mounted  (health · chat · ingest · embeddings · telegram)")
+    _ok("Routers mounted  (health · chat · ingest · embeddings · telegram · analytics)")
 
     _hdr("══════════  Startup complete – listening on :8000  ══════════\n")
 
@@ -97,3 +117,4 @@ app.include_router(chat.router, prefix="/chat", tags=["chat"])
 app.include_router(ingest.router, prefix="/ingest", tags=["ingest"])
 app.include_router(embeddings.router, prefix="/embeddings", tags=["embeddings"])
 app.include_router(telegram.router, prefix="/telegram", tags=["telegram"])
+app.include_router(analytics.router, prefix="/analytics", tags=["analytics"])

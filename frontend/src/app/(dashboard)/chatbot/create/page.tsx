@@ -11,6 +11,12 @@ import { ArrowLeft, ArrowRight, Bot, Check } from "lucide-react";
 
 const STEPS = ["Basic Info", "Personality", "Welcome", "Review"];
 
+const LANG_NAMES: Record<string, string> = {
+  en: "English", ta: "Tamil (தமிழ்)", hi: "Hindi (हिन्दी)",
+  es: "Spanish", fr: "French", de: "German",
+  pt: "Portuguese", zh: "Chinese", ja: "Japanese", ar: "Arabic",
+};
+
 export default function CreateChatbotPage() {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -188,6 +194,8 @@ export default function CreateChatbotPage() {
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
                   <option value="en">English</option>
+                  <option value="ta">Tamil (தமிழ்)</option>
+                  <option value="hi">Hindi (हिन्दी)</option>
                   <option value="es">Spanish</option>
                   <option value="fr">French</option>
                   <option value="de">German</option>
@@ -226,7 +234,7 @@ export default function CreateChatbotPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Language</span>
-                  <span className="font-medium">{form.language}</span>
+                  <span className="font-medium">{LANG_NAMES[form.language] ?? form.language}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-500">Brand Color</span>

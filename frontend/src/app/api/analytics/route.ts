@@ -8,15 +8,20 @@ export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const isAdmin = session.user?.role === "ADMIN";
   const userId = session.user?.id as string;
   const thirtyDaysAgo = subDays(new Date(), 30);
 
+  const sessionWhere = isAdmin ? {} : { chatbot: { userId } };
+  const messageWhere = isAdmin ? {} : { session: { chatbot: { userId } } };
+  const chatbotWhere = isAdmin ? {} : { userId };
+
   const [totalSessions, totalMessages, totalChatbots, recentSessions] = await Promise.all([
-    prisma.chatSession.count({ where: { chatbot: { userId } } }),
-    prisma.message.count({ where: { session: { chatbot: { userId } } } }),
-    prisma.chatbot.count({ where: { userId } }),
+    prisma.chatSession.count({ where: sessionWhere }),
+    prisma.message.count({ where: messageWhere }),
+    prisma.chatbot.count({ where: chatbotWhere }),
     prisma.chatSession.count({
-      where: { chatbot: { userId }, createdAt: { gte: thirtyDaysAgo } },
+      where: { ...sessionWhere, createdAt: { gte: thirtyDaysAgo } },
     }),
   ]);
 
@@ -25,5 +30,6 @@ export async function GET() {
     totalMessages,
     totalChatbots,
     recentSessions,
+    scope: isAdmin ? "GLOBAL_PLATFORM" : "WORKSPACE",
   });
 }

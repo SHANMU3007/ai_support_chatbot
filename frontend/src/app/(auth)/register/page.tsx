@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { signIn } from "next-auth/react";
+import { signIn, signOut } from "next-auth/react";
 import { useState } from "react";
+import { Shield, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +20,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [portal, setPortal] = useState<"admin" | "product">("product");
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,6 +32,12 @@ export default function RegisterPage() {
     });
     if (!result?.error) setEmailSent(true);
     setLoading(false);
+  };
+
+  const handleGoogleRegister = async () => {
+    setLoading(true);
+    await signOut({ redirect: false });
+    await signIn("google", { callbackUrl: "/dashboard" }, { prompt: "select_account" });
   };
 
   if (emailSent) {
@@ -48,14 +56,29 @@ export default function RegisterPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Create your account</CardTitle>
-        <CardDescription>Start for free, no credit card required</CardDescription>
+        <CardTitle>{portal === "admin" ? "Platform admin access" : "Create your chatbot workspace"}</CardTitle>
+        <CardDescription>{portal === "admin" ? "Admin accounts are provisioned for the SupportIQ team." : "Create, customize, and monitor chatbots for your business."}</CardDescription>
       </CardHeader>
+      <div className="px-6 grid grid-cols-2 gap-2">
+        <button type="button" onClick={() => setPortal("admin")} className={`rounded-lg border p-3 text-left ${portal === "admin" ? "border-indigo-600 bg-indigo-50" : "border-gray-200"}`}>
+          <Shield className="h-4 w-4 mb-1 text-indigo-600" /><span className="text-sm font-semibold block">Platform Admin</span><span className="text-xs text-gray-500">Manage the service</span>
+        </button>
+        <button type="button" onClick={() => setPortal("product")} className={`rounded-lg border p-3 text-left ${portal === "product" ? "border-indigo-600 bg-indigo-50" : "border-gray-200"}`}>
+          <MessageCircle className="h-4 w-4 mb-1 text-indigo-600" /><span className="text-sm font-semibold block">Product User</span><span className="text-xs text-gray-500">Manage your chatbot</span>
+        </button>
+      </div>
+      {portal === "admin" ? (
+        <CardContent className="space-y-4 pt-5">
+          <div className="rounded-lg bg-gray-50 p-4 text-sm text-gray-600">Platform admin accounts are not created through public registration.</div>
+          <Link href="/login?portal=admin" className="block"><Button className="w-full">Go to admin login</Button></Link>
+        </CardContent>
+      ) : (
       <CardContent className="space-y-4">
         <Button
-          onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+          onClick={handleGoogleRegister}
           variant="outline"
           className="w-full"
+          disabled={loading}
         >
           Continue with Google
         </Button>
@@ -84,6 +107,7 @@ export default function RegisterPage() {
           </Button>
         </form>
       </CardContent>
+      )}
       <CardFooter className="justify-center">
         <p className="text-sm text-muted-foreground">
           Already have an account?{" "}
