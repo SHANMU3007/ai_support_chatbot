@@ -21,13 +21,6 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID ?? "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
       allowDangerousEmailAccountLinking: true,
-      authorization: {
-        params: {
-          prompt: "select_account",
-          access_type: "offline",
-          response_type: "code",
-        },
-      },
     }),
     EmailProvider({
       server: {
@@ -45,6 +38,10 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   callbacks: {
+    async signIn({ user, account, profile }) {
+      console.log("[NEXTAUTH] signIn callback triggered for user:", user?.email);
+      return true;
+    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
