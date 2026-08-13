@@ -41,15 +41,24 @@ export const authOptions: NextAuthOptions = {
       from: process.env.EMAIL_FROM || "noreply@chatbot.ai",
     }),
   ],
+  session: {
+    strategy: "jwt",
+  },
   callbacks: {
-    async session({ session, user }) {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+      }
+      return token;
+    },
+    async session({ session, token }) {
       if (session?.user) {
-        const userId = user?.id || (session.user as any).id;
+        const userId = (token?.id as string) || token?.sub || (session.user as any).id;
         if (userId) {
           (session.user as any).id = userId;
 
           try {
-            const email = user?.email || session.user?.email;
+            const email = session.user?.email;
             const adminEmails = (process.env.ADMIN_EMAILS || "shanmugapatelkani@gmail.com")
               .split(",")
               .map((e) => e.trim().toLowerCase())
@@ -84,9 +93,6 @@ export const authOptions: NextAuthOptions = {
     signIn: "/login",
     error: "/login",
     verifyRequest: "/login?verify=1",
-  },
-  session: {
-    strategy: "database",
   },
 };
 
