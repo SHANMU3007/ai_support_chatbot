@@ -140,41 +140,22 @@ async def _scrape_and_embed(
     try:
         logger.info("Starting crawl: %s (max_pages=%d)", url, max_pages)
 
-        # Phase 1: Basic httpx-based crawl (fast, gets most content)
+        # Phase 1: Fast httpx-based crawl
         combined_text, pages_crawled = await url_scraper.crawl(url, max_pages=max_pages)
 
-        # Phase 2: JS-aware scrape for pages with dynamic content (pricing, tabs)
-        # This catches data hidden behind JavaScript tabs/carousels
-        try:
-            from app.services.js_scraper import scrape_with_js
-            logger.info("Running JS scraper for dynamic content on %s ...", url)
-
-            # Scrape the main URL and its pricing/services sub-pages with Playwright
-            js_text = await scrape_with_js(url, wait_seconds=5)
-            if js_text:
-                combined_text += f"\n\n--- JS-RENDERED CONTENT: {url} ---\n{js_text}"
-
-            # Also try common pricing/services sub-pages
-            from urllib.parse import urljoin
-            pricing_paths = [
-                "/PRICING_WOMEN/index.html", "/PRICING_MEN/index.html",
-                "/pricing", "/prices", "/services", "/menu",
-            ]
-            for path in pricing_paths:
-                sub_url = urljoin(url, path)
-                if sub_url != url:
-                    try:
-                        js_sub = await scrape_with_js(sub_url, wait_seconds=5)
-                        if js_sub and len(js_sub) > 100:
-                            combined_text += f"\n\n--- JS-RENDERED CONTENT: {sub_url} ---\n{js_sub}"
-                            pages_crawled += 1
-                    except Exception:
-                        pass
-
-        except ImportError:
-            logger.info("Playwright not available – skipping JS scraping")
-        except Exception as exc:
-            logger.warning("JS scraping failed (non-fatal): %s", exc)
+        # Phase 2: JS-aware scrape ONLY as a fallback for client-side SPAs (if Phase 1 gets < 300 chars)
+        if len(combined_text.strip()) < 300:
+            try:
+                from app.services.js_scraper import scrape_with_js
+                logger.info("Phase 1 yielded sparse text (<300 chars). Running Playwright JS scraper for %s...", url)
+                js_text = await scrape_with_js(url, wait_seconds=4)
+                if js_text:
+                    combined_text += f"\n\n--- JS-RENDERED CONTENT: {url} ---\n{js_text}"
+                    pages_crawled = max(pages_crawled, 1)
+            except ImportError:
+                logger.info("Playwright not available – skipping JS scraping fallback")
+            except Exception as exc:
+                logger.warning("JS scraping fallback failed: %s", exc)
 
         from app.utils.text_splitter import TextSplitter
         chunks = TextSplitter().split(combined_text)
