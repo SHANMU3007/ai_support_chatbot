@@ -140,22 +140,8 @@ async def _scrape_and_embed(
     try:
         logger.info("Starting crawl: %s (max_pages=%d)", url, max_pages)
 
-        # Phase 1: Fast httpx-based crawl
+        # Fast, non-blocking HTTP crawl with Next.js/HTML extraction
         combined_text, pages_crawled = await url_scraper.crawl(url, max_pages=max_pages)
-
-        # Phase 2: JS-aware scrape ONLY as a fallback for client-side SPAs (if Phase 1 gets < 300 chars)
-        if len(combined_text.strip()) < 300:
-            try:
-                from app.services.js_scraper import scrape_with_js
-                logger.info("Phase 1 yielded sparse text (<300 chars). Running Playwright JS scraper for %s...", url)
-                js_text = await scrape_with_js(url, wait_seconds=4)
-                if js_text:
-                    combined_text += f"\n\n--- JS-RENDERED CONTENT: {url} ---\n{js_text}"
-                    pages_crawled = max(pages_crawled, 1)
-            except ImportError:
-                logger.info("Playwright not available – skipping JS scraping fallback")
-            except Exception as exc:
-                logger.warning("JS scraping fallback failed: %s", exc)
 
         from app.utils.text_splitter import TextSplitter
         chunks = TextSplitter().split(combined_text)

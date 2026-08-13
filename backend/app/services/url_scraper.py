@@ -148,9 +148,35 @@ def _content_hash(text: str) -> str:
 def _extract_text(soup: BeautifulSoup) -> str:
     """
     Remove boilerplate tags then return clean multi-line body text.
-    Single shared implementation so both scrape() and crawl() strip
-    exactly the same set of tags.
+    Also extracts text from Next.js __NEXT_DATA__ scripts if present.
     """
+    next_data_text = ""
+    try:
+        next_script = soup.find("script", id="__NEXT_DATA__")
+        if next_script and next_script.string:
+            import json
+            data = json.loads(next_script.string)
+
+            def _extract_strings(obj):
+                out = []
+                if isinstance(obj, str):
+                    s = obj.strip()
+                    if len(s) > 3 and not s.startswith(("http://", "https://", "/", "data:")):
+                        out.append(s)
+                elif isinstance(obj, dict):
+                    for v in obj.values():
+                        out.extend(_extract_strings(v))
+                elif isinstance(obj, list):
+                    for item in obj:
+                        out.extend(_extract_strings(item))
+                return out
+
+            extracted = _extract_strings(data.get("props", {}))
+            if extracted:
+                next_data_text = "\n".join(dict.fromkeys(extracted))
+    except Exception:
+        pass
+
     for tag in soup(
         [
             "script", "style", "nav", "footer", "header",
@@ -158,8 +184,15 @@ def _extract_text(soup: BeautifulSoup) -> str:
         ]
     ):
         tag.decompose()
+
     raw = soup.get_text(separator="\n", strip=True)
-    return "\n".join(line for line in raw.splitlines() if line.strip())
+    lines = [line for line in raw.splitlines() if line.strip()]
+
+    if next_data_text:
+        lines.append("\n=== NEXT.JS STRUCTURED CONTENT ===")
+        lines.append(next_data_text)
+
+    return "\n".join(lines)
 
 
 async def _fetch_with_retry(
