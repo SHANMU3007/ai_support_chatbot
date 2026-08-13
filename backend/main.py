@@ -83,6 +83,15 @@ async def lifespan(app: FastAPI):
     except Exception:
         _fail("ChromaDB unreachable – document search will not work")
 
+    # ── 4. Pre-warm Embedding Model ───────────────────────────────────────────
+    _wait("Pre-warming embedding model in background …")
+    try:
+        from app.services.embedding_service import EmbeddingService
+        EmbeddingService()._get_model()
+        _ok("Embedding model ready")
+    except Exception as exc:
+        _fail(f"Embedding model pre-warm warning: {exc}")
+
     # ── 4. Routers ────────────────────────────────────────────────────────────
     _ok("Routers mounted  (health · chat · ingest · embeddings · telegram · analytics)")
 
