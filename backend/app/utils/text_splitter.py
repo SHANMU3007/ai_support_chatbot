@@ -14,8 +14,8 @@ class TextSplitter:
         self.chunk_size = chunk_size
         self.overlap = overlap
         self.chars_per_token = chars_per_token
-        # Minimum characters for a chunk to be worth embedding
-        self._min_chars = 100
+        # Minimum characters for a chunk to be worth embedding (at most half the chunk size)
+        self._min_chars = min(100, (chunk_size * chars_per_token) // 2)
 
     def _approx_tokens(self, text: str) -> int:
         return len(text) // self.chars_per_token
@@ -32,8 +32,8 @@ class TextSplitter:
         while start < len(text):
             end = start + chunk_chars
             chunk = text[start:end].strip()
-            # Only keep chunks with enough meaningful content
-            if chunk and len(chunk) >= self._min_chars:
+            # Only keep chunks with enough meaningful content or if it's the only chunk
+            if chunk and (len(chunk) >= self._min_chars or not chunks):
                 chunks.append(chunk)
             start = end - overlap_chars
 
