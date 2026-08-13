@@ -57,14 +57,22 @@ export async function POST(req: NextRequest) {
     });
 
     if (!res.ok) {
-      console.error(`FastAPI ingest/url returned HTTP ${res.status}`);
+      let detail = `Backend returned HTTP ${res.status}`;
+      try {
+        const errJson = await res.json();
+        detail = errJson.detail || errJson.error || detail;
+      } catch {
+        const text = await res.text().catch(() => "");
+        if (text) detail = text.slice(0, 300);
+      }
+      console.error(`FastAPI ingest/url error [HTTP ${res.status}]:`, detail);
       await prisma.document.update({
         where: { id: document.id },
         data: { status: "FAILED" },
       });
       return NextResponse.json(
-        { error: "Failed to initiate crawling on backend" },
-        { status: 502 }
+        { error: detail },
+        { status: res.status >= 400 && res.status < 600 ? res.status : 502 }
       );
     }
   } catch (err) {

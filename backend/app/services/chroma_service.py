@@ -17,15 +17,28 @@ _MetadataValue = Union[str, int, float, bool, None]
 
 class ChromaService:
     def __init__(self):
-        self._client: chromadb.HttpClient | None = None  # type: ignore[type-arg]
+        self._client = None
 
-    def _get_client(self) -> chromadb.HttpClient:  # type: ignore[type-arg]
+    def _get_client(self):
         if self._client is None:
-            self._client = chromadb.HttpClient(
-                host=settings.CHROMA_HOST,
-                port=settings.CHROMA_PORT,
-                settings=ChromaSettings(anonymized_telemetry=False),
-            )
+            try:
+                client = chromadb.HttpClient(
+                    host=settings.CHROMA_HOST,
+                    port=settings.CHROMA_PORT,
+                    settings=ChromaSettings(anonymized_telemetry=False),
+                )
+                client.heartbeat()
+                self._client = client
+            except Exception as exc:
+                logger.warning(
+                    "ChromaDB HttpClient connection failed to %s:%s (%s). Falling back to EphemeralClient.",
+                    settings.CHROMA_HOST,
+                    settings.CHROMA_PORT,
+                    exc,
+                )
+                self._client = chromadb.EphemeralClient(
+                    settings=ChromaSettings(anonymized_telemetry=False)
+                )
         return self._client
 
     def _collection_name(self, chatbot_id: str) -> str:
