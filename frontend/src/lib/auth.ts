@@ -5,11 +5,13 @@ import EmailProvider from "next-auth/providers/email";
 import { prisma } from "@/lib/prisma";
 
 export const authOptions: NextAuthOptions = {
+  secret: process.env.NEXTAUTH_SECRET,
+  debug: process.env.NODE_ENV === "development",
   adapter: PrismaAdapter(prisma),
   providers: [
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
       allowDangerousEmailAccountLinking: true,
       authorization: {
         params: {
@@ -33,35 +35,38 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async session({ session, user }) {
-      if (session?.user && user?.id) {
-        session.user.id = user.id;
+      if (session?.user) {
+        const userId = user?.id || (session.user as any).id;
+        if (userId) {
+          (session.user as any).id = userId;
 
-        try {
-          const email = user?.email || session.user?.email;
-          const adminEmails = (process.env.ADMIN_EMAILS || "shanmugapatelkani@gmail.com")
-            .split(",")
-            .map((e) => e.trim().toLowerCase())
-            .filter(Boolean);
+          try {
+            const email = user?.email || session.user?.email;
+            const adminEmails = (process.env.ADMIN_EMAILS || "shanmugapatelkani@gmail.com")
+              .split(",")
+              .map((e) => e.trim().toLowerCase())
+              .filter(Boolean);
 
-          let dbUser = await prisma.user.findUnique({
-            where: { id: user.id },
-            select: { plan: true, role: true },
-          });
-
-          const isConfiguredAdmin = email && adminEmails.includes(email.toLowerCase());
-
-          if (isConfiguredAdmin && dbUser?.role !== "ADMIN") {
-            dbUser = await prisma.user.update({
-              where: { id: user.id },
-              data: { role: "ADMIN", plan: "ENTERPRISE" },
+            let dbUser = await prisma.user.findUnique({
+              where: { id: userId },
               select: { plan: true, role: true },
             });
-          }
 
-          (session.user as any).plan = dbUser?.plan ?? "FREE";
-          (session.user as any).role = dbUser?.role ?? (isConfiguredAdmin ? "ADMIN" : "WORKSPACE");
-        } catch (err) {
-          console.error("Error resolving session user role:", err);
+            const isConfiguredAdmin = Boolean(email && adminEmails.includes(email.toLowerCase()));
+
+            if (isConfiguredAdmin && dbUser && dbUser.role !== "ADMIN") {
+              dbUser = await prisma.user.update({
+                where: { id: userId },
+                data: { role: "ADMIN", plan: "ENTERPRISE" },
+                select: { plan: true, role: true },
+              });
+            }
+
+            (session.user as any).plan = dbUser?.plan ?? "FREE";
+            (session.user as any).role = dbUser?.role ?? (isConfiguredAdmin ? "ADMIN" : "WORKSPACE");
+          } catch (err) {
+            console.error("Error resolving session user role:", err);
+          }
         }
       }
       return session;
@@ -76,3 +81,4 @@ export const authOptions: NextAuthOptions = {
     strategy: "database",
   },
 };
+

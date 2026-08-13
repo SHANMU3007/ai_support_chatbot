@@ -36,8 +36,7 @@ export default function RegisterPage() {
 
   const handleGoogleRegister = async () => {
     setLoading(true);
-    await signOut({ redirect: false });
-    await signIn("google", { callbackUrl: "/dashboard" }, { prompt: "select_account" });
+    await signIn("google", { callbackUrl: "/dashboard" });
   };
 
   if (emailSent) {

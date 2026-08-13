@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession, signIn, signOut } from "next-auth/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,23 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [emailSent, setEmailSent] = useState(false);
   const [portal, setPortal] = useState<"admin" | "product">("product");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const urlError = new URLSearchParams(window.location.search).get("error");
+      if (urlError) {
+        if (urlError === "Callback" || urlError === "OAuthCallback") {
+          setError(
+            "Google sign-in failed. Please verify that NEXTAUTH_URL, GOOGLE_CLIENT_ID, and GOOGLE_CLIENT_SECRET are set in Vercel, and that Authorized Redirect URIs are configured in Google Cloud Console."
+          );
+        } else if (urlError === "OAuthAccountNotLinked") {
+          setError("An account with this email exists using a different sign-in method.");
+        } else {
+          setError(`Authentication error: ${urlError}`);
+        }
+      }
+    }
+  }, []);
 
   if (session) {
     return (
