@@ -11,8 +11,12 @@ engine = create_async_engine(
     db_url,
     echo=False,
     pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20,
+    pool_size=5,          # reduced for Railway free tier memory limits
+    max_overflow=10,
+    connect_args={
+        "ssl": "require", # required for Supabase pooler on Railway
+        "server_settings": {"application_name": "supportiq-backend"},
+    },
 )
 
 AsyncSessionLocal = async_sessionmaker(
