@@ -66,8 +66,7 @@ async def lifespan(app: FastAPI):
         await init_db()
         _ok(f"Database ready  ({settings.DATABASE_URL.split('@')[-1]})")
     except Exception as exc:
-        _fail(f"Database error: {exc}")
-        sys.exit(1)
+        _fail(f"Database warning (will retry on demand): {exc}")
 
     # ── 3. ChromaDB ───────────────────────────────────────────────────────────
     _wait(f"Checking ChromaDB at {settings.CHROMA_HOST}:{settings.CHROMA_PORT} …")
