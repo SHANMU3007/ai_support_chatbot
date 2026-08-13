@@ -23,20 +23,30 @@ chroma_service = ChromaService()
 
 
 async def _update_status(document_id: str, status: str, chunk_count: int = 0) -> None:
-    """Update document status directly in Postgres (no HTTP roundtrip)."""
-    try:
-        async with engine.begin() as conn:
-            await conn.execute(
-                sa.text(
-                    'UPDATE "Document" SET status = CAST(:status AS "DocStatus"), '
-                    '"chunkCount" = :chunk_count, "updatedAt" = now() '
-                    'WHERE id = :id'
-                ),
-                {"status": status, "chunk_count": chunk_count, "id": document_id},
-            )
-        logger.info("Document %s → %s (chunks=%d)", document_id, status, chunk_count)
-    except Exception:
-        logger.exception("Failed to update status for document %s", document_id)
+    """Update document status directly in Postgres (with retry on transient errors)."""
+    for attempt in range(3):
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(
+                    sa.text(
+                        'UPDATE "Document" SET status = CAST(:status AS "DocStatus"), '
+                        '"chunkCount" = :chunk_count, "updatedAt" = now() '
+                        'WHERE id = :id'
+                    ),
+                    {"status": status, "chunk_count": chunk_count, "id": document_id},
+                )
+            logger.info("Document %s → %s (chunks=%d)", document_id, status, chunk_count)
+            return  # success
+        except Exception as exc:
+            if attempt < 2:
+                logger.warning(
+                    "DB update failed for %s (attempt %d/3): %s — retrying in 1s",
+                    document_id, attempt + 1, exc,
+                )
+                await asyncio.sleep(1.0)
+            else:
+                logger.exception("Failed to update status for document %s after 3 attempts", document_id)
+
 
 
 @router.post("/document")

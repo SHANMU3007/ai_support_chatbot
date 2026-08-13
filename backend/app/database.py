@@ -4,19 +4,24 @@ from sqlalchemy.orm import DeclarativeBase
 from app.config import settings
 
 db_url = settings.DATABASE_URL
+
+# asyncpg requires postgresql+asyncpg:// scheme
 if db_url.startswith("postgresql://"):
     db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+# Remove pgbouncer=true param — asyncpg doesn't understand it (it's for Prisma only)
+# Supabase pooler port 6543 handles SSL automatically; no connect_args needed.
+if "pgbouncer=true" in db_url:
+    db_url = db_url.replace("?pgbouncer=true", "").replace("&pgbouncer=true", "")
 
 engine = create_async_engine(
     db_url,
     echo=False,
     pool_pre_ping=True,
-    pool_size=5,          # reduced for Railway free tier memory limits
-    max_overflow=10,
-    connect_args={
-        "ssl": "require", # required for Supabase pooler on Railway
-        "server_settings": {"application_name": "supportiq-backend"},
-    },
+    pool_size=3,        # Railway free tier: keep small to avoid OOM
+    max_overflow=5,
+    pool_timeout=30,
+    pool_recycle=1800,  # recycle connections every 30 min
 )
 
 AsyncSessionLocal = async_sessionmaker(
