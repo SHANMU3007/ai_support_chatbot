@@ -87,8 +87,9 @@ async def lifespan(app: FastAPI):
     _wait("Pre-warming embedding model in background …")
     try:
         from app.services.embedding_service import EmbeddingService
-        EmbeddingService()._get_model()
-        _ok("Embedding model ready")
+        # Run loading in a background thread to prevent blocking startup lifespan hook
+        asyncio.create_task(asyncio.to_thread(EmbeddingService()._get_model))
+        _ok("Embedding model pre-warm initiated in background")
     except Exception as exc:
         _fail(f"Embedding model pre-warm warning: {exc}")
 
