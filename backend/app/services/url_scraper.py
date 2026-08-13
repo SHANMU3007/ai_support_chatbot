@@ -89,10 +89,10 @@ _SITEMAP_PATHS = [
     "/post-sitemap.xml",
 ]
 
-CONCURRENCY   = 8    # max simultaneous HTTP requests
-TIMEOUT       = 15   # seconds per request
-MAX_RETRIES   = 3    # retry attempts for transient failures
-RETRY_BACKOFF = 2.0  # base seconds for exponential back-off
+CONCURRENCY   = 16   # max simultaneous HTTP requests
+TIMEOUT       = 6    # seconds per request
+MAX_RETRIES   = 1    # retry attempts for transient failures
+RETRY_BACKOFF = 1.0  # base seconds for exponential back-off
 
 
 # ---------------------------------------------------------------------------
@@ -367,7 +367,7 @@ class URLScraper:
         """
         info = _RobotsInfo()
         try:
-            resp = await client.get(f"{base}/robots.txt", timeout=10)
+            resp = await client.get(f"{base}/robots.txt", timeout=3)
             if resp.status_code != 200:
                 return info
 
@@ -423,13 +423,18 @@ class URLScraper:
         seen_urls:        set[str]  = set()
         unique:           list[str] = []
 
-        for sitemap_url in candidates:
-            for u in await self._parse_sitemap(
-                client, sitemap_url, base, visited_sitemaps
-            ):
-                if u not in seen_urls:
-                    seen_urls.add(u)
-                    unique.append(u)
+        # Probe candidates in parallel for zero latency
+        results = await asyncio.gather(
+            *[self._parse_sitemap(client, sm_url, base, visited_sitemaps) for sm_url in candidates],
+            return_exceptions=True
+        )
+
+        for res in results:
+            if isinstance(res, list):
+                for u in res:
+                    if u not in seen_urls:
+                        seen_urls.add(u)
+                        unique.append(u)
 
         return unique
 
@@ -449,7 +454,7 @@ class URLScraper:
         visited.add(sitemap_url)
 
         try:
-            resp = await client.get(sitemap_url, timeout=10)
+            resp = await client.get(sitemap_url, timeout=3)
             if resp.status_code != 200:
                 return []
             ct = resp.headers.get("content-type", "")

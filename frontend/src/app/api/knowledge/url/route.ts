@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { chatbotId, url: rawUrl, maxPages = 50 } = await req.json();
+  const { chatbotId, url: rawUrl, maxPages = 15 } = await req.json();
 
   if (!chatbotId || !rawUrl) {
     return NextResponse.json({ error: "chatbotId and url are required" }, { status: 400 });
@@ -22,8 +22,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err.message || "Invalid URL format" }, { status: 400 });
   }
 
-  // Clamp max_pages between 1 and 500
-  const clampedMaxPages = Math.min(Math.max(Number(maxPages) || 50, 1), 500);
+  // Clamp max_pages between 1 and 500 (default 15 for fast completion)
+  const clampedMaxPages = Math.min(Math.max(Number(maxPages) || 15, 1), 500);
 
   // Verify chatbot ownership
   const chatbot = await prisma.chatbot.findFirst({
