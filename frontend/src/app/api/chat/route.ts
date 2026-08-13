@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import { scoreSessionSentiment } from "@/lib/sentiment";
+import { getFastApiUrl } from "@/lib/api-config";
 
 export const runtime = "nodejs";
 
@@ -30,8 +31,6 @@ export async function POST(req: NextRequest) {
     }
 
     // Get or create session
-    // A visitor may only continue a session belonging to this public chatbot.
-    // This prevents a session id from one chatbot being reused against another.
     let session = sessionId
       ? await prisma.chatSession.findFirst({
           where: { id: sessionId, chatbotId: botId },
@@ -75,11 +74,11 @@ export async function POST(req: NextRequest) {
       }));
 
     // Forward to FastAPI RAG backend and stream back
-    const fastapiUrl = process.env.FASTAPI_URL || "http://localhost:8000";
+    const backendUrl = getFastApiUrl("/chat/message");
 
     let backendResponse: Response | null = null;
     try {
-      backendResponse = await fetch(`${fastapiUrl}/chat/message`, {
+      backendResponse = await fetch(backendUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -120,7 +119,6 @@ export async function POST(req: NextRequest) {
     }
 
     // Transform the FastAPI SSE stream to normalize the format
-    // FastAPI sends {"content": "..."}, we need to also add {"text": "..."} for useChat compatibility
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
     const sessionIdForHeader = session.id;

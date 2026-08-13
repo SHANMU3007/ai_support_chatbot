@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getFastApiUrl } from "@/lib/api-config";
 
 interface Props {
   params: { id: string };
@@ -23,8 +24,8 @@ export async function DELETE(_req: NextRequest, { params }: Props) {
   await prisma.document.delete({ where: { id: params.id } });
 
   // Also delete from ChromaDB via backend
-  const fastapiUrl = process.env.FASTAPI_URL || "http://localhost:8000";
-  fetch(`${fastapiUrl}/ingest/document/${document.chatbotId}/${params.id}`, { method: "DELETE" }).catch(console.error);
+  const backendUrl = getFastApiUrl(`/ingest/document/${document.chatbotId}/${params.id}`);
+  fetch(backendUrl, { method: "DELETE" }).catch(console.error);
 
   return NextResponse.json({ success: true });
 }

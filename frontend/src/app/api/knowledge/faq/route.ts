@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getFastApiUrl } from "@/lib/api-config";
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -34,8 +35,8 @@ export async function POST(req: NextRequest) {
   });
 
   // Forward to FastAPI for embedding
-  const fastapiUrl = process.env.FASTAPI_URL || "http://localhost:8000";
-  fetch(`${fastapiUrl}/ingest/faq`, {
+  const backendUrl = getFastApiUrl("/ingest/faq");
+  fetch(backendUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ chatbot_id: chatbotId, document_id: document.id, pairs: faqs }),

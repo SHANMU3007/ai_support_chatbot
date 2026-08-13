@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getFastApiUrl } from "@/lib/api-config";
 
 interface Props {
   params: { id: string };
@@ -32,8 +33,8 @@ export async function POST(req: NextRequest, { params }: Props) {
   // If token is provided, connect the Telegram bot via backend
   if (token) {
     try {
-      const backendUrl = process.env.FASTAPI_URL || "http://localhost:8000";
-      const res = await fetch(`${backendUrl}/telegram/connect`, {
+      const backendUrl = getFastApiUrl("/telegram/connect");
+      const res = await fetch(backendUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -66,8 +67,8 @@ export async function POST(req: NextRequest, { params }: Props) {
   } else {
     // Disconnect the bot
     try {
-      const backendUrl = process.env.FASTAPI_URL || "http://localhost:8000";
-      await fetch(`${backendUrl}/telegram/disconnect`, {
+      const backendUrl = getFastApiUrl("/telegram/disconnect");
+      await fetch(backendUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ chatbot_id: params.id }),
@@ -99,8 +100,8 @@ export async function GET(_req: NextRequest, { params }: Props) {
   // Check if the bot is running
   let isRunning = false;
   try {
-    const backendUrl = process.env.FASTAPI_URL || "http://localhost:8000";
-    const res = await fetch(`${backendUrl}/telegram/status/${params.id}`);
+    const backendUrl = getFastApiUrl(`/telegram/status/${params.id}`);
+    const res = await fetch(backendUrl);
     if (res.ok) {
       const data = await res.json();
       isRunning = data.is_running;

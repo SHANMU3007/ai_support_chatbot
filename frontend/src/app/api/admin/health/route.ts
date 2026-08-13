@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getFastApiUrl } from "@/lib/api-config";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -21,10 +22,10 @@ export async function GET() {
   }
 
   // 2. FastAPI Backend
-  const fastapiUrl = process.env.FASTAPI_URL || "http://localhost:8000";
+  const backendUrl = getFastApiUrl("/health");
   const fastStart = Date.now();
   try {
-    const res = await fetch(`${fastapiUrl}/health`, { cache: "no-store" });
+    const res = await fetch(backendUrl, { cache: "no-store" });
     if (res.ok) {
       results.fastapi = { status: "online", latencyMs: Date.now() - fastStart };
     } else {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getFastApiUrl } from "@/lib/api-config";
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -9,10 +10,10 @@ export async function POST(req: NextRequest) {
   const { question } = await req.json();
   if (!question) return NextResponse.json({ error: "question is required" }, { status: 400 });
 
-  const fastapiUrl = process.env.FASTAPI_URL || "http://localhost:8000";
+  const backendUrl = getFastApiUrl("/analytics/nl-query");
 
   try {
-    const res = await fetch(`${fastapiUrl}/analytics/nl-query`, {
+    const res = await fetch(backendUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

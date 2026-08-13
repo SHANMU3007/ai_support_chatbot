@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getFastApiUrl } from "@/lib/api-config";
 
 export const dynamic = "force-dynamic";
 
@@ -41,14 +42,14 @@ export async function POST(req: NextRequest) {
   });
 
   // Forward to FastAPI for processing
-  const fastapiUrl = process.env.FASTAPI_URL || "http://localhost:8000";
+  const backendUrl = getFastApiUrl("/ingest/document");
   const backendFormData = new FormData();
   backendFormData.append("file", file);
   backendFormData.append("chatbot_id", chatbotId);
   backendFormData.append("document_id", document.id);
 
   // Fire-and-forget ingestion (don't block response)
-  fetch(`${fastapiUrl}/ingest/document`, {
+  fetch(backendUrl, {
     method: "POST",
     body: backendFormData,
   }).catch(console.error);
