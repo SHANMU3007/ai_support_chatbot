@@ -36,7 +36,8 @@ _FALLBACK_MODELS = [
 ]
 
 # Max context characters to send (prevent huge token usage)
-_MAX_CONTEXT_CHARS = 6000
+# 12,000 chars ≈ 3,000 tokens — enough for rich, accurate answers
+_MAX_CONTEXT_CHARS = 12000
 
 # Map ISO 639-1 codes to human-readable language names (with native script)
 _LANG_NAMES: dict[str, str] = {

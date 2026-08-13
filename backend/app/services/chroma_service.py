@@ -1,8 +1,14 @@
 """
 ChromaDB Service – manages collections per chatbot.
 Each chatbot gets its own ChromaDB collection named `bot_{chatbot_id}`.
+
+Storage strategy:
+  - Railway / Docker: PersistentClient at /data/chroma (survives restarts)
+  - Local dev with remote ChromaDB: HttpClient at CHROMA_HOST:CHROMA_PORT
+  - Fallback: EphemeralClient (in-memory, for tests only)
 """
 from typing import List, Dict, Union
+import os
 import chromadb
 from chromadb.config import Settings as ChromaSettings
 import logging
@@ -14,31 +20,52 @@ logger = logging.getLogger(__name__)
 # Metadata values must be scalar types supported by ChromaDB
 _MetadataValue = Union[str, int, float, bool, None]
 
+# Persistent path for Railway/Docker deployments
+_CHROMA_PERSIST_PATH = os.environ.get("CHROMA_PERSIST_PATH", "/data/chroma")
+
 
 class ChromaService:
     def __init__(self):
         self._client = None
 
     def _get_client(self):
-        if self._client is None:
+        if self._client is not None:
+            return self._client
+
+        # 1. Try HTTP client (explicit remote ChromaDB service)
+        chroma_host = settings.CHROMA_HOST
+        if chroma_host and chroma_host not in ("localhost", "127.0.0.1"):
             try:
                 client = chromadb.HttpClient(
-                    host=settings.CHROMA_HOST,
+                    host=chroma_host,
                     port=settings.CHROMA_PORT,
                     settings=ChromaSettings(anonymized_telemetry=False),
                 )
                 client.heartbeat()
                 self._client = client
+                logger.info("ChromaDB: connected to remote HttpClient at %s:%s", chroma_host, settings.CHROMA_PORT)
+                return self._client
             except Exception as exc:
-                logger.warning(
-                    "ChromaDB HttpClient connection failed to %s:%s (%s). Falling back to EphemeralClient.",
-                    settings.CHROMA_HOST,
-                    settings.CHROMA_PORT,
-                    exc,
-                )
-                self._client = chromadb.EphemeralClient(
-                    settings=ChromaSettings(anonymized_telemetry=False)
-                )
+                logger.warning("ChromaDB HttpClient failed for %s:%s (%s) — trying persistent storage.", chroma_host, settings.CHROMA_PORT, exc)
+
+        # 2. Use PersistentClient (Railway volume / local disk)
+        try:
+            os.makedirs(_CHROMA_PERSIST_PATH, exist_ok=True)
+            client = chromadb.PersistentClient(
+                path=_CHROMA_PERSIST_PATH,
+                settings=ChromaSettings(anonymized_telemetry=False),
+            )
+            self._client = client
+            logger.info("ChromaDB: using PersistentClient at %s", _CHROMA_PERSIST_PATH)
+            return self._client
+        except Exception as exc:
+            logger.warning("ChromaDB PersistentClient failed (%s) — falling back to EphemeralClient.", exc)
+
+        # 3. Last resort: ephemeral (in-memory, no persistence)
+        self._client = chromadb.EphemeralClient(
+            settings=ChromaSettings(anonymized_telemetry=False)
+        )
+        logger.warning("ChromaDB: using EphemeralClient (data will NOT persist across restarts).")
         return self._client
 
     def _collection_name(self, chatbot_id: str) -> str:
@@ -68,6 +95,7 @@ class ChromaService:
             embeddings=embeddings,  # type: ignore[arg-type]
             metadatas=metadatas,  # type: ignore[arg-type]
         )
+        logger.info("ChromaDB: upserted %d chunks for document %s (chatbot %s)", len(chunks), document_id, chatbot_id)
 
     async def query(
         self,

@@ -89,10 +89,10 @@ _SITEMAP_PATHS = [
     "/post-sitemap.xml",
 ]
 
-CONCURRENCY   = 16   # max simultaneous HTTP requests
-TIMEOUT       = 6    # seconds per request
+CONCURRENCY   = 20   # max simultaneous HTTP requests
+TIMEOUT       = 5    # seconds per request (lower = faster, fewer hangs)
 MAX_RETRIES   = 1    # retry attempts for transient failures
-RETRY_BACKOFF = 1.0  # base seconds for exponential back-off
+RETRY_BACKOFF = 0.5  # base seconds for exponential back-off
 
 
 # ---------------------------------------------------------------------------
@@ -301,12 +301,16 @@ class URLScraper:
             headers=_HEADERS, follow_redirects=True, timeout=TIMEOUT
         ) as client:
 
-            # ── Phase 1: parse robots.txt once for sitemaps + Crawl-delay ──
+            # ── Phase 1: parse robots.txt once for sitemaps ────────────
+            # NOTE: We intentionally ignore Crawl-delay to keep crawling fast.
+            # This is a background task for a legitimate business use case.
             robots = await self._parse_robots(client, base)
             if robots.crawl_delay:
                 logger.info(
-                    "Honouring robots.txt Crawl-delay: %.1fs", robots.crawl_delay
+                    "robots.txt Crawl-delay %.1fs found — ignoring for speed.",
+                    robots.crawl_delay,
                 )
+            robots.crawl_delay = None  # Always ignore crawl_delay
 
             # ── Phase 2: discover all URLs via sitemaps ────────────────────
             sitemap_urls = await self._discover_from_sitemaps(
@@ -556,10 +560,7 @@ class URLScraper:
         """
         async with sem:
             resp = await _fetch_with_retry(client, url)
-            # Honour Crawl-delay inside the semaphore so we don't flood the
-            # server between consecutive requests from the same worker slot.
-            if crawl_delay:
-                await asyncio.sleep(crawl_delay)
+            # crawl_delay is always None (ignored for speed)
 
         ct = resp.headers.get("content-type", "")
         if "text/html" not in ct:

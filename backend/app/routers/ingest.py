@@ -1,7 +1,9 @@
+import asyncio
 from fastapi import APIRouter, UploadFile, File, Form, BackgroundTasks
 from fastapi.responses import JSONResponse
 import logging
 import sqlalchemy as sa
+
 
 from app.database import engine
 from app.config import settings
@@ -140,11 +142,39 @@ async def _scrape_and_embed(
     try:
         logger.info("Starting crawl: %s (max_pages=%d)", url, max_pages)
 
-        # Fast, non-blocking HTTP crawl with Next.js/HTML extraction
-        combined_text, pages_crawled = await url_scraper.crawl(url, max_pages=max_pages)
+        # Cap total crawl time at 3 minutes — prevents hanging on slow sites
+        try:
+            combined_text, pages_crawled = await asyncio.wait_for(
+                url_scraper.crawl(url, max_pages=max_pages),
+                timeout=180.0,
+            )
+        except asyncio.TimeoutError:
+            logger.warning("Crawl timed out after 180s for %s — proceeding with partial data", url)
+            # Re-try with 10 pages max if the full crawl timed out
+            try:
+                combined_text, pages_crawled = await asyncio.wait_for(
+                    url_scraper.crawl(url, max_pages=10),
+                    timeout=60.0,
+                )
+                logger.info("Partial crawl succeeded: %d pages from %s", pages_crawled, url)
+            except asyncio.TimeoutError:
+                logger.error("Partial crawl also timed out for %s", url)
+                await _update_status(document_id, "FAILED")
+                return
+
+        if not combined_text or pages_crawled == 0:
+            logger.warning("No content scraped from %s", url)
+            await _update_status(document_id, "FAILED")
+            return
 
         from app.utils.text_splitter import TextSplitter
         chunks = TextSplitter().split(combined_text)
+
+        if not chunks:
+            logger.warning("No chunks produced from crawl of %s", url)
+            await _update_status(document_id, "FAILED")
+            return
+
         embeddings = await embedding_service.embed_chunks(chunks)
         await chroma_service.add_chunks(
             chatbot_id=chatbot_id,

@@ -31,9 +31,11 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
 
     # Model
-    MAX_TOKENS: int = 2048
-    CONTEXT_CHUNKS: int = 5
-    RAG_MIN_SIMILARITY: float = 0.12
+    MAX_TOKENS: int = 1024
+    CONTEXT_CHUNKS: int = 8
+    # Minimum cosine similarity for a chunk to be included in context.
+    # 0.25 = only genuinely relevant chunks; prevents hallucinations from noise.
+    RAG_MIN_SIMILARITY: float = 0.25
 
 
 settings = Settings()
