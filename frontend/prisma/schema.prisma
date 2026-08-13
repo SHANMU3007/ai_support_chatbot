@@ -7,8 +7,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Account {
@@ -95,20 +96,20 @@ model Document {
 }
 
 model ChatSession {
-  id        String    @id @default(cuid())
-  chatbotId String
-  chatbot   Chatbot   @relation(fields: [chatbotId], references: [id], onDelete: Cascade)
-  visitorId String
-  language  String    @default("en")
-  messages  Message[]
-  metadata  Json?
-  sentiment Sentiment?
-  sentimentScore Float?
-  sentimentReason String? @db.Text
-  needsFollowUp Boolean @default(false)
+  id                 String     @id @default(cuid())
+  chatbotId          String
+  chatbot            Chatbot    @relation(fields: [chatbotId], references: [id], onDelete: Cascade)
+  visitorId          String
+  language           String     @default("en")
+  messages           Message[]
+  metadata           Json?
+  sentiment          Sentiment?
+  sentimentScore     Float?
+  sentimentReason    String?    @db.Text
+  needsFollowUp      Boolean    @default(false)
   sentimentUpdatedAt DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
 }
 
 model Message {
