@@ -34,13 +34,31 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // Forward to FastAPI for embedding
+  // Forward to FastAPI for embedding (await fetch to prevent Vercel lambda termination)
   const backendUrl = getFastApiUrl("/ingest/faq");
-  fetch(backendUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chatbot_id: chatbotId, document_id: document.id, pairs: faqs }),
-  }).catch(console.error);
+  try {
+    const res = await fetch(backendUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chatbot_id: chatbotId, document_id: document.id, pairs: faqs }),
+    });
+
+    if (!res.ok) {
+      console.error(`FastAPI ingest/faq returned HTTP ${res.status}`);
+      await prisma.document.update({
+        where: { id: document.id },
+        data: { status: "FAILED" },
+      });
+      return NextResponse.json({ error: "Backend FAQ processing failed" }, { status: 502 });
+    }
+  } catch (err) {
+    console.error("FastAPI connection error during FAQ ingestion:", err);
+    await prisma.document.update({
+      where: { id: document.id },
+      data: { status: "FAILED" },
+    });
+    return NextResponse.json({ error: "Backend server is unreachable" }, { status: 502 });
+  }
 
   return NextResponse.json(document, { status: 201 });
 }

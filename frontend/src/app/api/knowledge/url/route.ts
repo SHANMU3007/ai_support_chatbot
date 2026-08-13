@@ -42,18 +42,42 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // Forward to FastAPI for crawling + embedding using robust URL builder
+  // Forward to FastAPI for crawling + embedding (await fetch to prevent Vercel lambda freezing)
   const backendUrl = getFastApiUrl("/ingest/url");
-  fetch(backendUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chatbot_id: chatbotId,
-      document_id: document.id,
-      url,
-      max_pages: clampedMaxPages,
-    }),
-  }).catch(console.error);
+  try {
+    const res = await fetch(backendUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chatbot_id: chatbotId,
+        document_id: document.id,
+        url,
+        max_pages: clampedMaxPages,
+      }),
+    });
+
+    if (!res.ok) {
+      console.error(`FastAPI ingest/url returned HTTP ${res.status}`);
+      await prisma.document.update({
+        where: { id: document.id },
+        data: { status: "FAILED" },
+      });
+      return NextResponse.json(
+        { error: "Failed to initiate crawling on backend" },
+        { status: 502 }
+      );
+    }
+  } catch (err) {
+    console.error("FastAPI connection error during URL ingestion:", err);
+    await prisma.document.update({
+      where: { id: document.id },
+      data: { status: "FAILED" },
+    });
+    return NextResponse.json(
+      { error: "Backend server is unreachable" },
+      { status: 502 }
+    );
+  }
 
   return NextResponse.json({ ...document, maxPages: clampedMaxPages }, { status: 201 });
 }

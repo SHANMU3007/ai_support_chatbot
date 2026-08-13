@@ -41,18 +41,35 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // Forward to FastAPI for processing
+  // Forward to FastAPI for processing (await fetch to prevent Vercel lambda termination)
   const backendUrl = getFastApiUrl("/ingest/document");
   const backendFormData = new FormData();
   backendFormData.append("file", file);
   backendFormData.append("chatbot_id", chatbotId);
   backendFormData.append("document_id", document.id);
 
-  // Fire-and-forget ingestion (don't block response)
-  fetch(backendUrl, {
-    method: "POST",
-    body: backendFormData,
-  }).catch(console.error);
+  try {
+    const res = await fetch(backendUrl, {
+      method: "POST",
+      body: backendFormData,
+    });
+
+    if (!res.ok) {
+      console.error(`FastAPI ingest/document returned HTTP ${res.status}`);
+      await prisma.document.update({
+        where: { id: document.id },
+        data: { status: "FAILED" },
+      });
+      return NextResponse.json({ error: "Backend document processing failed" }, { status: 502 });
+    }
+  } catch (err) {
+    console.error("FastAPI connection error during document upload:", err);
+    await prisma.document.update({
+      where: { id: document.id },
+      data: { status: "FAILED" },
+    });
+    return NextResponse.json({ error: "Backend server is unreachable" }, { status: 502 });
+  }
 
   return NextResponse.json(document, { status: 201 });
 }
