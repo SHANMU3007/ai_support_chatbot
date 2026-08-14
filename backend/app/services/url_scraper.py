@@ -51,7 +51,6 @@ _HEADERS = {
     ),
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br",
     "Cache-Control": "no-cache",
     "Pragma": "no-cache",
     "Sec-Ch-Ua": '"Chromium";v="124", "Google Chrome";v="124"',
@@ -436,11 +435,17 @@ class URLScraper:
         base:            str,
         robots_sitemaps: list[str],
     ) -> list[str]:
-        seen_candidates: set[str]  = set(robots_sitemaps)
-        candidates:      list[str] = list(robots_sitemaps)
+        seen_candidates: set[str]  = set()
+        candidates:      list[str] = []
+
+        for sm_url in robots_sitemaps:
+            norm_url = self._normalise(sm_url)
+            if norm_url not in seen_candidates:
+                seen_candidates.add(norm_url)
+                candidates.append(norm_url)
 
         for path in _SITEMAP_PATHS:
-            full = base + path
+            full = self._normalise(base + path)
             if full not in seen_candidates:
                 seen_candidates.add(full)
                 candidates.append(full)
