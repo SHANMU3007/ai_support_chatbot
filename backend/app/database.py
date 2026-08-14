@@ -1,4 +1,3 @@
-from uuid import uuid4
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 
@@ -15,12 +14,14 @@ if db_url.startswith("postgresql://"):
 if "pgbouncer=true" in db_url:
     db_url = db_url.replace("?pgbouncer=true", "").replace("&pgbouncer=true", "")
 
-# Supabase pooler (port 6543) uses PgBouncer in transaction mode, which does
-# NOT support asyncpg prepared statements. Setting statement_cache_size=0
-# disables them and prevents "prepared statement does not exist" errors.
-# We also use a unique name function to avoid name collisions on startup.
-_is_pgbouncer = ":6543/" in db_url
+# Disable SQLAlchemy's statement cache to prevent InvalidSQLStatementNameError with PgBouncer
+if "?" in db_url:
+    db_url += "&prepared_statement_cache_size=0"
+else:
+    db_url += "?prepared_statement_cache_size=0"
 
+# Always disable prepared statement cache when using Supabase/PgBouncer
+# to prevent "prepared statement does not exist" errors in transaction mode.
 engine = create_async_engine(
     db_url,
     echo=False,
@@ -29,10 +30,7 @@ engine = create_async_engine(
     max_overflow=5,
     pool_timeout=30,
     pool_recycle=1800,  # recycle connections every 30 min
-    connect_args={
-        "statement_cache_size": 0,
-        "prepared_statement_name_func": lambda: f"__asyncpg_{uuid4().hex}__",
-    } if _is_pgbouncer else {},
+    connect_args={"statement_cache_size": 0},
 )
 
 AsyncSessionLocal = async_sessionmaker(
