@@ -14,6 +14,11 @@ if db_url.startswith("postgresql://"):
 if "pgbouncer=true" in db_url:
     db_url = db_url.replace("?pgbouncer=true", "").replace("&pgbouncer=true", "")
 
+# Supabase pooler (port 6543) uses PgBouncer in transaction mode, which does
+# NOT support asyncpg prepared statements. Setting statement_cache_size=0
+# disables them and prevents "prepared statement does not exist" errors.
+_is_pgbouncer = ":6543/" in db_url
+
 engine = create_async_engine(
     db_url,
     echo=False,
@@ -22,6 +27,7 @@ engine = create_async_engine(
     max_overflow=5,
     pool_timeout=30,
     pool_recycle=1800,  # recycle connections every 30 min
+    connect_args={"statement_cache_size": 0} if _is_pgbouncer else {},
 )
 
 AsyncSessionLocal = async_sessionmaker(

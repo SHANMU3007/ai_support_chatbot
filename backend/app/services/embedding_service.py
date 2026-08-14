@@ -31,7 +31,7 @@ class EmbeddingService:
         return EmbeddingService._model
 
     async def embed_text(self, text: str) -> List[float]:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         model = self._get_model()
         
         def _encode() -> List[float]:
@@ -48,7 +48,7 @@ class EmbeddingService:
         """
         if not chunks:
             return []
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         model = self._get_model()
 
         def _batch_encode() -> List[List[float]]:
