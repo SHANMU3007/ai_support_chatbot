@@ -69,19 +69,13 @@ async def lifespan(app: FastAPI):
         _fail(f"Database warning (will retry on demand): {exc}")
 
     # ── 3. ChromaDB ───────────────────────────────────────────────────────────
-    _wait(f"Checking ChromaDB at {settings.CHROMA_HOST}:{settings.CHROMA_PORT} …")
+    _wait("Checking ChromaDB storage …")
     try:
-        import httpx
-        r = httpx.get(
-            f"http://{settings.CHROMA_HOST}:{settings.CHROMA_PORT}/api/v1/heartbeat",
-            timeout=3,
-        )
-        if r.status_code == 200:
-            _ok("ChromaDB reachable")
-        else:
-            _fail(f"ChromaDB returned HTTP {r.status_code}")
-    except Exception:
-        _fail("ChromaDB unreachable – document search will not work")
+        from app.services.chroma_service import ChromaService
+        ChromaService()._get_client()
+        _ok("ChromaDB ready")
+    except Exception as exc:
+        _fail(f"ChromaDB warning (will retry on demand): {exc}")
 
     # ── 4. Pre-warm Embedding Model ───────────────────────────────────────────
     _wait("Pre-warming embedding model in background …")
@@ -104,8 +98,8 @@ async def lifespan(app: FastAPI):
         from sqlalchemy import text
 
         async def _startup_bots():
-            # Wait a few seconds to let other initializations settle
-            await asyncio.sleep(5)
+            # Wait 8s to let previous rolling-deployment container shut down its polling
+            await asyncio.sleep(8)
             try:
                 async with AsyncSessionLocal() as session:
                     # Query all active chatbots with a non-null telegram token

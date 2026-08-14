@@ -20,6 +20,7 @@ from telegram.ext import (
 )
 
 from app.services.rag_service import RagService
+from telegram.error import Conflict, NetworkError, TelegramError
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,22 @@ _running_bots: Dict[str, Application] = {}
 
 # Single shared RAG service instance (thread-safe / async-safe)
 _rag_service = RagService()
+
+
+async def _error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
+    """Handle uncaught errors in the Telegram application / updater loop."""
+    if isinstance(context.error, Conflict):
+        cb_id = context.bot_data.get("chatbot_id", "unknown")
+        logger.warning(
+            "Telegram bot conflict for chatbot %s: Another instance is polling with this token. "
+            "Will automatically resolve once the previous container / instance shuts down.",
+            cb_id,
+        )
+        await asyncio.sleep(5)
+    elif isinstance(context.error, NetworkError):
+        logger.warning("Telegram bot network error: %s", context.error)
+    else:
+        logger.error("Telegram bot error: %s", context.error, exc_info=context.error)
 
 
 async def _handle_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -166,12 +183,13 @@ async def start_bot(
             # Register handlers
             app.add_handler(CommandHandler("start", _handle_start))
             app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, _handle_message))
+            app.add_error_handler(_error_handler)
 
             # Initialize and start polling
             logger.info("Connecting to Telegram API (attempt %d/%d)...", attempt, max_retries)
             await app.initialize()
             await app.start()
-            await app.updater.start_polling(drop_pending_updates=True)
+            await app.updater.start_polling(drop_pending_updates=True, bootstrap_retries=-1)
 
             _running_bots[chatbot_id] = app
             logger.info("Telegram bot started for chatbot %s (%s)", chatbot_id, business_name)
