@@ -96,6 +96,50 @@ async def lifespan(app: FastAPI):
     # ── 4. Routers ────────────────────────────────────────────────────────────
     _ok("Routers mounted  (health · chat · ingest · embeddings · telegram · analytics)")
 
+    # ── 5. Auto-start Telegram Bots ───────────────────────────────────────────
+    _wait("Auto-starting Telegram bots for active chatbots …")
+    try:
+        from app.services.telegram_bot import start_bot
+        from app.database import AsyncSessionLocal
+        from sqlalchemy import text
+
+        async def _startup_bots():
+            # Wait a few seconds to let other initializations settle
+            await asyncio.sleep(5)
+            try:
+                async with AsyncSessionLocal() as session:
+                    # Query all active chatbots with a non-null telegram token
+                    # Note the double quotes for case-sensitive PostgreSQL tables/columns from Prisma
+                    result = await session.execute(
+                        text('SELECT id, "telegramToken", "businessName", language, "systemPrompt" FROM "Chatbot" WHERE "telegramToken" IS NOT NULL AND "isActive" = TRUE')
+                    )
+                    chatbots = result.fetchall()
+                    if chatbots:
+                        _ok(f"Found {len(chatbots)} chatbot(s) with Telegram tokens configured. Starting them...")
+                        for cb in chatbots:
+                            cb_id, token, biz_name, lang, prompt = cb
+                            _wait(f"Starting Telegram bot for chatbot {cb_id} ({biz_name}) …")
+                            success = await start_bot(
+                                chatbot_id=cb_id,
+                                token=token,
+                                business_name=biz_name,
+                                language=lang or "en",
+                                system_prompt=prompt
+                            )
+                            if success:
+                                _ok(f"Telegram bot for {cb_id} started successfully")
+                            else:
+                                _fail(f"Failed to start Telegram bot for {cb_id}")
+                    else:
+                        _ok("No active chatbots with Telegram tokens found.")
+            except Exception as exc:
+                _fail(f"Failed to query chatbots for Telegram auto-start: {exc}")
+
+        # Run in background so it doesn't block startup hook
+        asyncio.create_task(_startup_bots())
+    except Exception as exc:
+        _fail(f"Telegram auto-start initialization failed: {exc}")
+
     _hdr("══════════  Startup complete – listening on :8000  ══════════\n")
 
     try:

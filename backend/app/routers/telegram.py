@@ -8,7 +8,6 @@ from typing import Optional
 import logging
 
 from app.services.telegram_bot import start_bot, stop_bot, get_running_bots
-from app.config import settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -33,7 +32,6 @@ async def connect_telegram(request: TelegramConnectRequest):
         chatbot_id=request.chatbot_id,
         token=request.token,
         business_name=request.business_name,
-        backend_url=settings.FASTAPI_URL,
         language=request.language or "en",
         system_prompt=request.system_prompt,
     )

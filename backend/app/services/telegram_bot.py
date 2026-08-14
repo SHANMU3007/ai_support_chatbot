@@ -2,12 +2,14 @@
 Telegram Bot Manager – runs Telegram bots for chatbots using polling.
 No webhooks, no HTTPS, no tunnels needed. Works purely over localhost.
 Each chatbot with a telegramToken gets its own polling bot instance.
+
+NOTE: _handle_message calls RagService directly (no HTTP round-trip),
+so this works identically in local dev and any deployed environment.
 """
 import asyncio
 import logging
-from typing import Dict
+from typing import Dict, Optional
 
-import httpx
 from telegram import Update
 from telegram.ext import (
     Application,
@@ -17,10 +19,15 @@ from telegram.ext import (
     filters,
 )
 
+from app.services.rag_service import RagService
+
 logger = logging.getLogger(__name__)
 
 # Store running bot applications by chatbot_id
 _running_bots: Dict[str, Application] = {}
+
+# Single shared RAG service instance (thread-safe / async-safe)
+_rag_service = RagService()
 
 
 async def _handle_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -33,7 +40,7 @@ async def _handle_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def _handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle incoming text messages — send to RAG backend and reply."""
+    """Handle incoming text messages — call RagService directly and reply."""
     if not update.message or not update.message.text:
         return
 
@@ -41,83 +48,66 @@ async def _handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chatbot_id = context.bot_data.get("chatbot_id", "")
     chat_id = update.message.chat_id
     user_id = update.message.from_user.id if update.message.from_user else 0
-    backend_url = context.bot_data.get("backend_url", "http://localhost:8000")
-
     language = context.bot_data.get("language", "en")
     system_prompt = context.bot_data.get("system_prompt")
 
     logger.info(
-        "Telegram message from user=%s chat=%s: %s (lang: %s)",
-        user_id, chat_id, user_message[:100], language
+        "Telegram message from user=%s chat=%s chatbot=%s: %s (lang: %s)",
+        user_id, chat_id, chatbot_id, user_message[:100], language,
     )
 
-    # Send "typing" indicator
+    # Send "typing" indicator while we process
     try:
         await update.message.chat.send_action("typing")
     except Exception:
-        pass  # don't fail on typing indicator errors
+        pass  # typing indicator is best-effort
 
     reply = ""
     try:
-        async with httpx.AsyncClient(timeout=90.0) as client:
-            response = await client.post(
-                f"{backend_url}/chat/telegram",
-                json={
-                    "chatbot_id": chatbot_id,
-                    "session_id": f"tg_{chat_id}",
-                    "message": user_message,
-                    "visitor_id": f"telegram_{user_id}",
-                    "history": [],
-                    "language": language,
-                    "system_prompt": system_prompt,
-                },
-            )
+        # Call RagService directly — no HTTP round-trip, works in all envs
+        async for chunk in _rag_service.stream_response(
+            chatbot_id=chatbot_id,
+            session_id=f"tg_{chat_id}",
+            message=user_message,
+            history=[],
+            visitor_id=f"telegram_{user_id}",
+            language=language,
+            system_prompt=system_prompt,
+        ):
+            reply += chunk
 
-            logger.info("Backend response status: %s", response.status_code)
+        logger.info("Reply generated: %d chars for chatbot %s", len(reply), chatbot_id)
 
-            if response.status_code == 200:
-                data = response.json()
-                reply = data.get("reply", "Sorry, I couldn't generate a response.")
-                logger.info("Reply length: %d chars", len(reply))
-            else:
-                logger.error(
-                    "Backend returned %s for chatbot %s: %s",
-                    response.status_code, chatbot_id, response.text[:500],
-                )
-                reply = "😞 I'm having trouble connecting right now. Please try again later."
-
-    except httpx.TimeoutException:
-        logger.error("Timeout calling backend for chatbot %s", chatbot_id)
-        reply = "⏳ My response is taking too long. Please try a shorter question."
-    except Exception as exc:
-        logger.exception("Error calling backend for Telegram bot (chatbot %s)", chatbot_id)
+    except Exception:
+        logger.exception(
+            "Error generating RAG response for Telegram bot (chatbot %s)", chatbot_id
+        )
         reply = "😞 Something went wrong. Please try again in a moment."
 
     # Ensure reply is not empty
     if not reply or not reply.strip():
         reply = "I'm sorry, I couldn't generate a response. Please try again."
 
-    # Telegram has a 4096 char limit per message
+    # Telegram has a 4096 char limit per message — send in chunks if needed
     try:
         if len(reply) > 4000:
             for i in range(0, len(reply), 4000):
                 await update.message.reply_text(reply[i : i + 4000])
         else:
             await update.message.reply_text(reply)
-    except Exception as exc:
+    except Exception:
         logger.exception("Failed to send reply to Telegram chat %s", chat_id)
 
 
 async def start_bot(
-    chatbot_id: str, 
-    token: str, 
-    business_name: str, 
-    backend_url: str = "http://localhost:8000",
+    chatbot_id: str,
+    token: str,
+    business_name: str,
     language: str = "en",
-    system_prompt: str = None,
-):
+    system_prompt: Optional[str] = None,
+) -> bool:
     """Start a Telegram bot for a specific chatbot using polling."""
-    # Clean the token: remove spaces, newlines, and carriage returns (common in copy-pastes)
+    # Clean the token: strip spaces, newlines, carriage returns (common in copy-pastes)
     token = token.strip().replace(" ", "").replace("\n", "").replace("\r", "")
 
     if chatbot_id in _running_bots:
@@ -142,7 +132,6 @@ async def start_bot(
             # Store metadata in bot_data so handlers can access it
             app.bot_data["chatbot_id"] = chatbot_id
             app.bot_data["business_name"] = business_name
-            app.bot_data["backend_url"] = backend_url
             app.bot_data["language"] = language
             app.bot_data["system_prompt"] = system_prompt
 
@@ -168,7 +157,10 @@ async def start_bot(
             if attempt < max_retries:
                 await asyncio.sleep(5)  # wait before retrying
             else:
-                logger.exception("Failed to start Telegram bot for chatbot %s after %d attempts", chatbot_id, max_retries)
+                logger.exception(
+                    "Failed to start Telegram bot for chatbot %s after %d attempts",
+                    chatbot_id, max_retries,
+                )
                 return False
 
 
