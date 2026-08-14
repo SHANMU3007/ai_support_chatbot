@@ -77,7 +77,7 @@ _SKIP_EXTENSIONS = re.compile(
 _SKIP_PATHS = re.compile(
     r"/(wp-admin|wp-login|wp-json|wp-cron|admin|login|logout"
     r"|cart|checkout|my-account|order|wp-content/uploads"
-    r"|feed|rss|xmlrpc|_next/static|_next/image|api/)(/|$)",
+    r"|feed|rss|xmlrpc|_next/static|_next/image|_next/data|api/)(/|$)",
     re.IGNORECASE,
 )
 
@@ -96,9 +96,9 @@ _SITEMAP_PATHS = [
 ]
 
 CONCURRENCY   = 20   # max simultaneous HTTP requests
-TIMEOUT       = 5    # seconds per request
-MAX_RETRIES   = 1    # retry once on transient errors
-RETRY_BACKOFF = 0.5  # back-off base in seconds
+TIMEOUT       = 15   # seconds per request (Vercel/Cloudflare cold-starts can take 3-8s)
+MAX_RETRIES   = 3    # retry on transient errors (429, 5xx, timeouts)
+RETRY_BACKOFF = 1.0  # back-off base in seconds (exponential: 1s, 2s, 3s)
 
 
 # ---------------------------------------------------------------------------
@@ -252,6 +252,21 @@ def _extract_text(soup: BeautifulSoup) -> str:
     return "\n".join(combined_parts)
 
 
+def _is_cloudflare_challenge(resp: httpx.Response) -> bool:
+    """Detect Cloudflare JS challenge / bot-block pages."""
+    if resp.status_code in (403, 503):
+        ct = resp.headers.get("content-type", "")
+        server = resp.headers.get("server", "").lower()
+        if "cloudflare" in server or "cf-ray" in resp.headers:
+            body_preview = resp.text[:500].lower()
+            if any(sig in body_preview for sig in (
+                "challenge-platform", "cf-browser-verification",
+                "just a moment", "checking your browser",
+            )):
+                return True
+    return False
+
+
 async def _fetch_with_retry(
     client:      httpx.AsyncClient,
     url:         str,
@@ -261,12 +276,23 @@ async def _fetch_with_retry(
 ) -> httpx.Response:
     last_exc: Exception | None = None
 
-    for attempt in range(max_retries):
+    # max_retries=3 means: 1 initial + 3 retries = 4 total attempts
+    for attempt in range(max_retries + 1):
         try:
             resp = await client.get(url, timeout=timeout)
 
+            # Cloudflare JS challenge — skip this page entirely
+            if _is_cloudflare_challenge(resp):
+                logger.debug("Cloudflare challenge detected at %s — skipping", url)
+                raise httpx.HTTPStatusError(
+                    f"Cloudflare challenge at {url}",
+                    request=resp.request,
+                    response=resp,
+                )
+
             if resp.status_code == 429 or resp.status_code >= 500:
                 wait = backoff * (attempt + 1)
+                logger.debug("HTTP %d for %s — retry in %.1fs", resp.status_code, url, wait)
                 await asyncio.sleep(wait)
                 last_exc = httpx.HTTPStatusError(
                     f"HTTP {resp.status_code}",
@@ -282,10 +308,11 @@ async def _fetch_with_retry(
 
         except (httpx.TransportError, httpx.TimeoutException) as exc:
             wait = backoff * (attempt + 1)
+            logger.debug("Transport error for %s: %s — retry in %.1fs", url, exc, wait)
             await asyncio.sleep(wait)
             last_exc = exc
 
-    raise last_exc or RuntimeError(f"Failed to fetch {url} after {max_retries} attempts")
+    raise last_exc or RuntimeError(f"Failed to fetch {url} after {max_retries + 1} attempts")
 
 
 # ---------------------------------------------------------------------------
@@ -302,8 +329,9 @@ class URLScraper:
 
     async def scrape(self, url: str, timeout: int = TIMEOUT) -> str:
         """Scrape a single page and return clean text."""
+        headers = {**_HEADERS, "Referer": _canonical_origin(url) + "/"}
         async with httpx.AsyncClient(
-            headers=_HEADERS, follow_redirects=True, timeout=timeout
+            headers=headers, follow_redirects=True, max_redirects=10, timeout=timeout
         ) as client:
             text = await self._fetch_page(client, url, timeout=timeout)
             logger.info("Scraped %s: %d chars", url, len(text))
@@ -323,9 +351,10 @@ class URLScraper:
         parsed = urlparse(seed_url)
         base   = f"{parsed.scheme}://{parsed.netloc}"
         sem    = asyncio.Semaphore(CONCURRENCY)
+        headers = {**_HEADERS, "Referer": base + "/"}
 
         async with httpx.AsyncClient(
-            headers=_HEADERS, follow_redirects=True, timeout=TIMEOUT
+            headers=headers, follow_redirects=True, max_redirects=10, timeout=TIMEOUT
         ) as client:
 
             # Phase 1: robots.txt (sitemap URLs only — ignore crawl_delay for speed)
@@ -415,7 +444,8 @@ class URLScraper:
                 stripped = line.strip()
                 lower    = stripped.lower()
                 if lower.startswith("sitemap:"):
-                    sm = stripped.split(":", 1)[1].strip()
+                    # Use len("Sitemap:") to avoid splitting on the colon in https://
+                    sm = stripped[len("Sitemap:"):].strip()
                     if sm:
                         info.sitemap_urls.append(sm)
                 elif lower.startswith("crawl-delay:"):

@@ -39,7 +39,10 @@ class Settings(BaseSettings):
     # App
     FASTAPI_URL: str = "http://localhost:8000"
     NEXTJS_URL: str = "http://localhost:3000"
-    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000"]
+    ALLOWED_ORIGINS: List[str] = [
+        "http://localhost:3000",
+        "https://ai-support-chatbot-blush.vercel.app",
+    ]
     LOG_LEVEL: str = "INFO"
 
     # Embedding model

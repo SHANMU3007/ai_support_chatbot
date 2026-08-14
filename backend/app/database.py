@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
+import re
 
 from app.config import settings
 
@@ -10,9 +11,11 @@ if db_url.startswith("postgresql://"):
     db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
 
 # Remove pgbouncer=true param — asyncpg doesn't understand it (it's for Prisma only)
-# Supabase pooler port 6543 handles SSL automatically; no connect_args needed.
+# Use regex to handle any parameter ordering (e.g., ?sslmode=require&pgbouncer=true)
 if "pgbouncer=true" in db_url:
-    db_url = db_url.replace("?pgbouncer=true", "").replace("&pgbouncer=true", "")
+    db_url = re.sub(r"[?&]pgbouncer=true", "", db_url)
+    # Clean up leftover '&' at start of query string (e.g., ?&sslmode=...)
+    db_url = db_url.replace("?&", "?")
 
 # Disable SQLAlchemy's statement cache to prevent InvalidSQLStatementNameError with PgBouncer
 if "?" in db_url:

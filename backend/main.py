@@ -147,6 +147,12 @@ async def lifespan(app: FastAPI):
     except asyncio.CancelledError:
         pass  # Python 3.13 sends CancelledError on Ctrl-C; suppress the noise
     finally:
+        # Stop all Telegram bots cleanly before shutdown
+        try:
+            from app.services.telegram_bot import stop_all_bots
+            await stop_all_bots()
+        except Exception:
+            pass
         print(f"\n{YLW}  ⏹  SupportIQ Backend shutting down …{RST}", flush=True)
 
 

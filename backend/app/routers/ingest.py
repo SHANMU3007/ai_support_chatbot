@@ -152,19 +152,19 @@ async def _scrape_and_embed(
     try:
         logger.info("Starting crawl: %s (max_pages=%d)", url, max_pages)
 
-        # Cap total crawl time at 3 minutes — prevents hanging on slow sites
+        # Cap total crawl time at 5 minutes — allows for 15s timeouts + retries per page
         try:
             combined_text, pages_crawled = await asyncio.wait_for(
                 url_scraper.crawl(url, max_pages=max_pages),
-                timeout=180.0,
+                timeout=300.0,
             )
         except asyncio.TimeoutError:
-            logger.warning("Crawl timed out after 180s for %s — proceeding with partial data", url)
+            logger.warning("Crawl timed out after 300s for %s — proceeding with partial data", url)
             # Re-try with 10 pages max if the full crawl timed out
             try:
                 combined_text, pages_crawled = await asyncio.wait_for(
                     url_scraper.crawl(url, max_pages=10),
-                    timeout=60.0,
+                    timeout=120.0,
                 )
                 logger.info("Partial crawl succeeded: %d pages from %s", pages_crawled, url)
             except asyncio.TimeoutError:

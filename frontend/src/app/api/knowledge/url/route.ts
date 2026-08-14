@@ -82,6 +82,19 @@ export async function POST(req: NextRequest) {
       console.log("FastAPI ingest/url dispatched asynchronously (exceeded 5s wait).");
     } else {
       console.error("FastAPI connection error during URL ingestion:", err);
+      // Backend is unreachable — mark as FAILED so the user isn't left waiting
+      try {
+        await prisma.document.update({
+          where: { id: document.id },
+          data: { status: "FAILED" },
+        });
+      } catch (dbErr) {
+        console.error("Failed to update document status to FAILED:", dbErr);
+      }
+      return NextResponse.json(
+        { error: "Backend service unavailable. Please try again later.", id: document.id },
+        { status: 502 }
+      );
     }
   }
 

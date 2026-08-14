@@ -32,11 +32,16 @@ _rag_service = RagService()
 
 async def _handle_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle the /start command."""
+    if not update.message:
+        return
     bot_name = context.bot_data.get("business_name", "our business")
-    await update.message.reply_text(
-        f"👋 Hello! I'm the AI assistant for {bot_name}.\n\n"
-        f"Ask me anything about our services and I'll be happy to help!"
-    )
+    try:
+        await update.message.reply_text(
+            f"\U0001f44b Hello! I'm the AI assistant for {bot_name}.\n\n"
+            f"Ask me anything about our services and I'll be happy to help!"
+        )
+    except Exception:
+        logger.exception("Failed to send /start reply")
 
 
 async def _handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -56,11 +61,21 @@ async def _handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id, chat_id, chatbot_id, user_message[:100], language,
     )
 
-    # Send "typing" indicator while we process
-    try:
-        await update.message.chat.send_action("typing")
-    except Exception:
-        pass  # typing indicator is best-effort
+    # Send "typing" indicator while we process.
+    # Telegram's typing indicator expires after ~5s, so we refresh it
+    # periodically with a background task during long RAG responses.
+    typing_active = True
+
+    async def _keep_typing():
+        """Refresh typing indicator every 4 seconds until cancelled."""
+        while typing_active:
+            try:
+                await update.message.chat.send_action("typing")
+            except Exception:
+                break
+            await asyncio.sleep(4)
+
+    typing_task = asyncio.create_task(_keep_typing())
 
     reply = ""
     try:
@@ -82,7 +97,15 @@ async def _handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.exception(
             "Error generating RAG response for Telegram bot (chatbot %s)", chatbot_id
         )
-        reply = "😞 Something went wrong. Please try again in a moment."
+        reply = "\U0001f61e Something went wrong. Please try again in a moment."
+    finally:
+        # Stop the typing indicator
+        typing_active = False
+        typing_task.cancel()
+        try:
+            await typing_task
+        except asyncio.CancelledError:
+            pass
 
     # Ensure reply is not empty
     if not reply or not reply.strip():
@@ -110,6 +133,10 @@ async def start_bot(
     # Clean the token: strip spaces, newlines, carriage returns (common in copy-pastes)
     token = token.strip().replace(" ", "").replace("\n", "").replace("\r", "")
 
+    if not token:
+        logger.error("Empty Telegram token for chatbot %s", chatbot_id)
+        return False
+
     if chatbot_id in _running_bots:
         logger.info("Bot for chatbot %s is already running, restarting...", chatbot_id)
         await stop_bot(chatbot_id)
@@ -117,6 +144,7 @@ async def start_bot(
     # Retry up to 3 times (Telegram API can be slow from certain regions)
     max_retries = 3
     for attempt in range(1, max_retries + 1):
+        app: Application | None = None
         try:
             # Increase timeouts to handle slow connections to api.telegram.org
             app = (
@@ -146,7 +174,7 @@ async def start_bot(
             await app.updater.start_polling(drop_pending_updates=True)
 
             _running_bots[chatbot_id] = app
-            logger.info("✅ Telegram bot started for chatbot %s (%s)", chatbot_id, business_name)
+            logger.info("Telegram bot started for chatbot %s (%s)", chatbot_id, business_name)
             return True
 
         except Exception as exc:
@@ -154,6 +182,13 @@ async def start_bot(
                 "Attempt %d/%d failed for chatbot %s: %s",
                 attempt, max_retries, chatbot_id, exc,
             )
+            # Clean up partially initialized Application to prevent resource leaks
+            if app is not None:
+                try:
+                    await app.shutdown()
+                except Exception:
+                    pass
+
             if attempt < max_retries:
                 await asyncio.sleep(5)  # wait before retrying
             else:
@@ -161,7 +196,8 @@ async def start_bot(
                     "Failed to start Telegram bot for chatbot %s after %d attempts",
                     chatbot_id, max_retries,
                 )
-                return False
+
+    return False
 
 
 async def stop_bot(chatbot_id: str):
@@ -169,12 +205,28 @@ async def stop_bot(chatbot_id: str):
     app = _running_bots.pop(chatbot_id, None)
     if app:
         try:
-            await app.updater.stop()
-            await app.stop()
-            await app.shutdown()
-            logger.info("⏹ Telegram bot stopped for chatbot %s", chatbot_id)
+            if app.updater and app.updater.running:
+                await app.updater.stop()
+            if app.running:
+                await app.stop()
         except Exception:
             logger.exception("Error stopping Telegram bot for chatbot %s", chatbot_id)
+        finally:
+            # Always call shutdown to release resources, even if stop() failed
+            try:
+                await app.shutdown()
+            except Exception:
+                pass
+        logger.info("Telegram bot stopped for chatbot %s", chatbot_id)
+
+
+async def stop_all_bots():
+    """Stop all running Telegram bots. Called during application shutdown."""
+    bot_ids = list(_running_bots.keys())
+    for chatbot_id in bot_ids:
+        await stop_bot(chatbot_id)
+    if bot_ids:
+        logger.info("Stopped %d Telegram bot(s) during shutdown", len(bot_ids))
 
 
 def get_running_bots() -> list:
