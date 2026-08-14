@@ -117,6 +117,9 @@ async def start_bot(
     system_prompt: str = None,
 ):
     """Start a Telegram bot for a specific chatbot using polling."""
+    # Clean the token: remove spaces, newlines, and carriage returns (common in copy-pastes)
+    token = token.strip().replace(" ", "").replace("\n", "").replace("\r", "")
+
     if chatbot_id in _running_bots:
         logger.info("Bot for chatbot %s is already running, restarting...", chatbot_id)
         await stop_bot(chatbot_id)
