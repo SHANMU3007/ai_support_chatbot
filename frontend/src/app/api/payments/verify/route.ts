@@ -39,6 +39,16 @@ export async function POST(req: NextRequest) {
 
     if (expectedSignature !== razorpay_signature) {
       console.error("[Razorpay Verify] Signature mismatch!");
+      // Mark payment as failed if record exists
+      try {
+        await prisma.payment.updateMany({
+          where: { razorpayOrderId: razorpay_order_id },
+          data: {
+            razorpayPaymentId: razorpay_payment_id,
+            status: "FAILED",
+          },
+        });
+      } catch {}
       return NextResponse.json({ error: "Invalid payment signature verification" }, { status: 400 });
     }
 
@@ -60,6 +70,21 @@ export async function POST(req: NextRequest) {
         role: true,
       },
     });
+
+    // Update payment record to SUCCESS
+    try {
+      await prisma.payment.updateMany({
+        where: { razorpayOrderId: razorpay_order_id },
+        data: {
+          razorpayPaymentId: razorpay_payment_id,
+          razorpaySignature: razorpay_signature,
+          status: "SUCCESS",
+          plan: plan as any,
+        },
+      });
+    } catch (paymentErr) {
+      console.error("[Razorpay Payment Update Error]:", paymentErr);
+    }
 
     return NextResponse.json({
       success: true,

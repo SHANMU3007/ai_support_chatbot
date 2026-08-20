@@ -32,8 +32,9 @@ export async function POST(req: NextRequest, { params }: Props) {
 
   // If token is provided, connect the Telegram bot via backend
   if (token) {
+    let backendUrl = "";
     try {
-      const backendUrl = getFastApiUrl("/telegram/connect");
+      backendUrl = getFastApiUrl("/telegram/connect");
       const res = await fetch(backendUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest, { params }: Props) {
       });
 
       if (!res.ok) {
-        const error = await res.json();
+        const error = await res.json().catch(() => ({ detail: "Unknown backend error" }));
         return NextResponse.json(
           { error: error.detail || "Failed to connect Telegram bot" },
           { status: 400 }
@@ -58,9 +59,10 @@ export async function POST(req: NextRequest, { params }: Props) {
         status: "connected",
         message: "Telegram bot connected successfully!",
       });
-    } catch {
+    } catch (fetchErr: any) {
+      console.error("[Telegram Connect Error]:", fetchErr);
       return NextResponse.json(
-        { error: "Failed to reach the backend server" },
+        { error: `Failed to reach backend server at ${backendUrl || "FASTAPI_URL"}. Please ensure your backend is online and FASTAPI_URL is configured in Vercel.` },
         { status: 500 }
       );
     }

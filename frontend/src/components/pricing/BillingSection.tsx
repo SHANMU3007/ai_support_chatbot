@@ -4,7 +4,7 @@ import { useState } from "react";
 import Script from "next/script";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Check, Loader2, Zap, Shield, Crown, Sparkles } from "lucide-react";
+import { Check, Loader2, Zap, Shield, Crown, Sparkles, CreditCard } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 declare global {
@@ -23,6 +23,17 @@ interface PlanItem {
   popular?: boolean;
   color: string;
   icon: React.ComponentType<{ className?: string }>;
+}
+
+export interface PaymentRecord {
+  id: string;
+  razorpayOrderId: string;
+  razorpayPaymentId: string | null;
+  amount: number;
+  currency: string;
+  plan: string;
+  status: "PENDING" | "SUCCESS" | "FAILED";
+  createdAt: string | Date;
 }
 
 const PLANS: PlanItem[] = [
@@ -97,7 +108,13 @@ const PLANS: PlanItem[] = [
   },
 ];
 
-export function BillingSection({ currentPlan = "FREE" }: { currentPlan?: string }) {
+export function BillingSection({
+  currentPlan = "FREE",
+  payments = [],
+}: {
+  currentPlan?: string;
+  payments?: PaymentRecord[];
+}) {
   const { data: session, update } = useSession();
   const router = useRouter();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
@@ -343,6 +360,58 @@ export function BillingSection({ currentPlan = "FREE" }: { currentPlan?: string 
             );
           })}
         </div>
+
+        {/* Payment History / Transactions Table */}
+        {payments && payments.length > 0 && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-4 shadow-sm mt-8">
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4 text-gray-700" />
+              <h3 className="font-bold text-gray-900 text-base">Payment History</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-gray-100 text-gray-400 uppercase tracking-wider">
+                    <th className="pb-3 font-semibold">Date</th>
+                    <th className="pb-3 font-semibold">Plan</th>
+                    <th className="pb-3 font-semibold">Amount</th>
+                    <th className="pb-3 font-semibold">Order ID</th>
+                    <th className="pb-3 font-semibold">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50 text-gray-700">
+                  {payments.map((p) => (
+                    <tr key={p.id} className="hover:bg-gray-50/50 transition">
+                      <td className="py-3">
+                        {new Date(p.createdAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </td>
+                      <td className="py-3 font-medium text-gray-900">{p.plan}</td>
+                      <td className="py-3 font-semibold">₹{(p.amount / 100).toFixed(2)}</td>
+                      <td className="py-3 text-gray-500 font-mono">{p.razorpayPaymentId || p.razorpayOrderId}</td>
+                      <td className="py-3">
+                        <span
+                          className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                            p.status === "SUCCESS"
+                              ? "bg-green-100 text-green-700"
+                              : p.status === "FAILED"
+                              ? "bg-red-100 text-red-700"
+                              : "bg-yellow-100 text-yellow-700"
+                          }`}
+                        >
+                          {p.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

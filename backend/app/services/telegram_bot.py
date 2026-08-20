@@ -189,6 +189,12 @@ async def start_bot(
             logger.info("Connecting to Telegram API (attempt %d/%d)...", attempt, max_retries)
             await app.initialize()
             await app.start()
+            try:
+                # Crucial: Delete any previously registered webhooks before polling
+                await app.bot.delete_webhook(drop_pending_updates=True)
+            except Exception as w_err:
+                logger.warning("Could not delete webhook for chatbot %s: %s", chatbot_id, w_err)
+
             await app.updater.start_polling(drop_pending_updates=True, bootstrap_retries=-1)
 
             _running_bots[chatbot_id] = app

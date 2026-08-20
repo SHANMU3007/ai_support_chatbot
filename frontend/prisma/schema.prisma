@@ -58,8 +58,25 @@ model User {
   accounts      Account[]
   sessions      Session[]
   chatbots      Chatbot[]
+  payments      Payment[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  userId            String
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  razorpayOrderId   String        @unique
+  razorpayPaymentId String?       @unique
+  razorpaySignature String?
+  amount            Int           // In paise (e.g. 49900 = ₹499.00)
+  currency          String        @default("INR")
+  plan              Plan
+  status            PaymentStatus @default(PENDING)
+  receipt           String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 }
 
 model Chatbot {
@@ -128,6 +145,12 @@ enum Plan {
   STARTER
   PRO
   ENTERPRISE
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
 }
 
 enum UserRole {

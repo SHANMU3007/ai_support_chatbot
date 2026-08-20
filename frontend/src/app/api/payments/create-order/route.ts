@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { razorpay, getRazorpayKeyId, getRazorpayKeySecret, PLAN_PRICING } from "@/lib/razorpay";
 
 export async function POST(req: NextRequest) {
@@ -28,8 +29,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid plan or amount" }, { status: 400 });
     }
 
-    const userId = (session.user as any).id || session.user.email;
-    const cleanId = userId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 10);
+    const dbUser = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true, email: true },
+    });
+
+    if (!dbUser) {
+      return NextResponse.json({ error: "User account not found" }, { status: 404 });
+    }
+
+    const cleanId = dbUser.id.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 10);
     const receipt = `rcpt_${Date.now().toString().slice(-8)}_${cleanId}`;
 
     const options = {
@@ -37,13 +46,30 @@ export async function POST(req: NextRequest) {
       currency: "INR",
       receipt: receipt.slice(0, 40),
       notes: {
-        userId: userId,
-        userEmail: session.user.email,
+        userId: dbUser.id,
+        userEmail: dbUser.email,
         plan: plan,
       },
     };
 
     const order = await razorpay.orders.create(options);
+
+    // Save pending payment record in PostgreSQL
+    try {
+      await prisma.payment.create({
+        data: {
+          userId: dbUser.id,
+          razorpayOrderId: order.id,
+          amount: order.amount as number,
+          currency: order.currency || "INR",
+          plan: plan as any,
+          status: "PENDING",
+          receipt: receipt,
+        },
+      });
+    } catch (dbErr) {
+      console.error("[Razorpay DB Payment Init Error]:", dbErr);
+    }
 
     return NextResponse.json({
       orderId: order.id,

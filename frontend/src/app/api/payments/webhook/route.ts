@@ -37,13 +37,40 @@ export async function POST(req: NextRequest) {
       const notes = paymentEntity?.notes || {};
       const userEmail = notes.userEmail;
       const plan = notes.plan;
+      const orderId = paymentEntity?.order_id;
+      const paymentId = paymentEntity?.id;
 
       if (userEmail && plan) {
         await prisma.user.update({
           where: { email: userEmail },
           data: { plan: plan as any },
         });
+
+        if (orderId) {
+          await prisma.payment.updateMany({
+            where: { razorpayOrderId: orderId },
+            data: {
+              razorpayPaymentId: paymentId,
+              status: "SUCCESS",
+              plan: plan as any,
+            },
+          });
+        }
         console.log(`[Razorpay Webhook] User ${userEmail} upgraded to plan ${plan} via webhook.`);
+      }
+    } else if (event === "payment.failed") {
+      const paymentEntity = payload.payload?.payment?.entity;
+      const orderId = paymentEntity?.order_id;
+      const paymentId = paymentEntity?.id;
+
+      if (orderId) {
+        await prisma.payment.updateMany({
+          where: { razorpayOrderId: orderId },
+          data: {
+            razorpayPaymentId: paymentId,
+            status: "FAILED",
+          },
+        });
       }
     }
 
