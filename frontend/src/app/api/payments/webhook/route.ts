@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
+import { PLAN_PRICING } from "@/lib/razorpay";
 
 export const dynamic = "force-dynamic";
 
@@ -38,18 +39,21 @@ export async function POST(req: NextRequest) {
       const paymentEntity = payload.payload?.payment?.entity;
       const notes = paymentEntity?.notes || {};
       const userEmail = notes.userEmail;
-      const plan = notes.plan;
+      const rawPlan = notes.plan || "PRO";
+      const plan = String(rawPlan).trim().toUpperCase();
       const orderId = paymentEntity?.order_id;
       const paymentId = paymentEntity?.id;
+      const amount = paymentEntity?.amount || PLAN_PRICING[plan]?.amount || 0;
 
-      if (userEmail && plan) {
-        await prisma.user.update({
+      if (userEmail) {
+        const user = await prisma.user.update({
           where: { email: userEmail },
           data: { plan: plan as any },
+          select: { id: true, email: true },
         });
 
         if (orderId) {
-          await prisma.payment.updateMany({
+          const updateResult = await prisma.payment.updateMany({
             where: { razorpayOrderId: orderId },
             data: {
               razorpayPaymentId: paymentId,
@@ -57,6 +61,20 @@ export async function POST(req: NextRequest) {
               plan: plan as any,
             },
           });
+
+          if (updateResult.count === 0 && user) {
+            await prisma.payment.create({
+              data: {
+                userId: user.id,
+                razorpayOrderId: orderId,
+                razorpayPaymentId: paymentId,
+                amount: amount,
+                currency: "INR",
+                plan: plan as any,
+                status: "SUCCESS",
+              },
+            }).catch(() => {});
+          }
         }
         console.log(`[Razorpay Webhook] User ${userEmail} upgraded to plan ${plan} via webhook.`);
       }

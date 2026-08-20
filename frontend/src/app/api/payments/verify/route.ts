@@ -11,18 +11,24 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized. Please log in." }, { status: 401 });
     }
 
+    const body = await req.json().catch(() => ({}));
     const {
       razorpay_order_id,
       razorpay_payment_id,
       razorpay_signature,
-      plan,
-    } = await req.json();
+      plan: rawPlan,
+    } = body;
 
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !plan) {
-      return NextResponse.json({ error: "Missing required payment fields" }, { status: 400 });
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return NextResponse.json({ error: "Missing required payment fields." }, { status: 400 });
+    }
+
+    const plan = String(rawPlan || "PRO").trim().toUpperCase();
+    if (!PLAN_PRICING[plan]) {
+      return NextResponse.json({ error: `Invalid plan specified: ${plan}` }, { status: 400 });
     }
 
     const secret = getRazorpayKeySecret();
@@ -51,15 +57,10 @@ export async function POST(req: NextRequest) {
           },
         });
       } catch {}
-      return NextResponse.json({ error: "Invalid payment signature verification" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid payment signature verification." }, { status: 400 });
     }
 
-    // Valid plan enum check
-    if (!PLAN_PRICING[plan]) {
-      return NextResponse.json({ error: "Invalid plan specified" }, { status: 400 });
-    }
-
-    // Update user's plan in Prisma Database
+    // Upgrade user's plan in PostgreSQL
     const updatedUser = await prisma.user.update({
       where: { email: session.user.email },
       data: {
@@ -73,9 +74,9 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Update payment record to SUCCESS
+    // Update or insert payment record with SUCCESS
     try {
-      await prisma.payment.updateMany({
+      const updateResult = await prisma.payment.updateMany({
         where: { razorpayOrderId: razorpay_order_id },
         data: {
           razorpayPaymentId: razorpay_payment_id,
@@ -84,6 +85,22 @@ export async function POST(req: NextRequest) {
           plan: plan as any,
         },
       });
+
+      // If create-order didn't persist payment record earlier, insert it now
+      if (updateResult.count === 0) {
+        await prisma.payment.create({
+          data: {
+            userId: updatedUser.id,
+            razorpayOrderId: razorpay_order_id,
+            razorpayPaymentId: razorpay_payment_id,
+            razorpaySignature: razorpay_signature,
+            amount: PLAN_PRICING[plan]?.amount || 0,
+            currency: "INR",
+            plan: plan as any,
+            status: "SUCCESS",
+          },
+        });
+      }
     } catch (paymentErr) {
       console.error("[Razorpay Payment Update Error]:", paymentErr);
     }

@@ -10,32 +10,33 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized. Please log in." }, { status: 401 });
     }
 
     const keyId = getRazorpayKeyId();
     if (!keyId) {
       return NextResponse.json(
-        { error: "Razorpay credentials are not configured on the server." },
+        { error: "Razorpay Key ID is not configured on the server." },
         { status: 500 }
       );
     }
 
-    const body = await req.json();
-    const { plan } = body;
+    const body = await req.json().catch(() => ({}));
+    const rawPlan = body.plan || "PRO";
+    const plan = String(rawPlan).trim().toUpperCase();
 
     const planConfig = PLAN_PRICING[plan];
     if (!planConfig || planConfig.amount <= 0) {
-      return NextResponse.json({ error: "Invalid plan or amount" }, { status: 400 });
+      return NextResponse.json({ error: `Invalid plan specified: ${plan}` }, { status: 400 });
     }
 
-    const dbUser = await prisma.user.findUnique({
+    let dbUser = await prisma.user.findUnique({
       where: { email: session.user.email },
       select: { id: true, email: true },
     });
 
     if (!dbUser) {
-      return NextResponse.json({ error: "User account not found" }, { status: 404 });
+      return NextResponse.json({ error: "User account not found." }, { status: 404 });
     }
 
     const cleanId = dbUser.id.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 10);
@@ -55,13 +56,13 @@ export async function POST(req: NextRequest) {
     const razorpay = getRazorpayClient();
     const order = await razorpay.orders.create(options);
 
-    // Save pending payment record in PostgreSQL
+    // Persist pending payment record in PostgreSQL
     try {
       await prisma.payment.create({
         data: {
           userId: dbUser.id,
           razorpayOrderId: order.id,
-          amount: order.amount as number,
+          amount: Number(order.amount),
           currency: order.currency || "INR",
           plan: plan as any,
           status: "PENDING",
