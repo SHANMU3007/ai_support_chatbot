@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { razorpay, getRazorpayKeyId, getRazorpayKeySecret, PLAN_PRICING } from "@/lib/razorpay";
+import { getRazorpayClient, getRazorpayKeyId, PLAN_PRICING } from "@/lib/razorpay";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,9 +14,7 @@ export async function POST(req: NextRequest) {
     }
 
     const keyId = getRazorpayKeyId();
-    const keySecret = getRazorpayKeySecret();
-
-    if (!keyId || !keySecret) {
+    if (!keyId) {
       return NextResponse.json(
         { error: "Razorpay credentials are not configured on the server." },
         { status: 500 }
@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
       },
     };
 
+    const razorpay = getRazorpayClient();
     const order = await razorpay.orders.create(options);
 
     // Save pending payment record in PostgreSQL

@@ -5,6 +5,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PLAN_PRICING, getRazorpayKeySecret } from "@/lib/razorpay";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);

@@ -6,10 +6,19 @@ export const getRazorpayKeyId = () =>
 export const getRazorpayKeySecret = () =>
   (process.env.RAZORPAY_KEY_SECRET || "").trim();
 
-export const razorpay = new Razorpay({
-  key_id: getRazorpayKeyId(),
-  key_secret: getRazorpayKeySecret(),
-});
+export function getRazorpayClient() {
+  const key_id = getRazorpayKeyId();
+  const key_secret = getRazorpayKeySecret();
+
+  if (!key_id || !key_secret) {
+    throw new Error("Razorpay credentials (RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET) are missing.");
+  }
+
+  return new Razorpay({
+    key_id,
+    key_secret,
+  });
+}
 
 export const PLAN_PRICING: Record<
   string,

@@ -82,76 +82,79 @@ export function DocumentUploader({ chatbotId }: Props) {
     };
   }, [uploads, chatbotId]);
 
-  const uploadFile = async (file: File) => {
-    const id = `${file.name}-${Date.now()}`;
-    setUploads((prev) => [
-      { name: file.name, progress: 0, status: "uploading" },
-      ...prev,
-    ]);
+  const uploadFile = useCallback(
+    async (file: File) => {
+      const id = `${file.name}-${Date.now()}`;
+      setUploads((prev) => [
+        { name: file.name, progress: 0, status: "uploading" },
+        ...prev,
+      ]);
 
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("chatbotId", chatbotId);
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("chatbotId", chatbotId);
 
-      // Simulate upload progress
-      const progressInterval = setInterval(() => {
+        // Simulate upload progress
+        const progressInterval = setInterval(() => {
+          setUploads((prev) =>
+            prev.map((u) =>
+              u.name === file.name && u.status === "uploading"
+                ? { ...u, progress: Math.min(u.progress + 15, 90) }
+                : u
+            )
+          );
+        }, 200);
+
+        const res = await fetch("/api/knowledge/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        clearInterval(progressInterval);
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || "Upload failed");
+        }
+
+        const data = await res.json();
+
         setUploads((prev) =>
           prev.map((u) =>
             u.name === file.name && u.status === "uploading"
-              ? { ...u, progress: Math.min(u.progress + 15, 90) }
+              ? {
+                  ...u,
+                  progress: 100,
+                  status: "processing" as const,
+                  documentId: data.id,
+                }
               : u
           )
         );
-      }, 200);
-
-      const res = await fetch("/api/knowledge/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      clearInterval(progressInterval);
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || "Upload failed");
+      } catch (err) {
+        setUploads((prev) =>
+          prev.map((u) =>
+            u.name === file.name && u.status === "uploading"
+              ? {
+                  ...u,
+                  status: "error" as const,
+                  errorMsg:
+                    err instanceof Error ? err.message : "Upload failed",
+                }
+              : u
+          )
+        );
       }
-
-      const data = await res.json();
-
-      setUploads((prev) =>
-        prev.map((u) =>
-          u.name === file.name && u.status === "uploading"
-            ? {
-                ...u,
-                progress: 100,
-                status: "processing" as const,
-                documentId: data.id,
-              }
-            : u
-        )
-      );
-    } catch (err) {
-      setUploads((prev) =>
-        prev.map((u) =>
-          u.name === file.name && u.status === "uploading"
-            ? {
-                ...u,
-                status: "error" as const,
-                errorMsg:
-                  err instanceof Error ? err.message : "Upload failed",
-              }
-            : u
-        )
-      );
-    }
-  };
+    },
+    [chatbotId]
+  );
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       acceptedFiles.forEach(uploadFile);
     },
-    [chatbotId]
+    [uploadFile]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
