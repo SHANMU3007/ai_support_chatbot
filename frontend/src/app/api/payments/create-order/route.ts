@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { razorpay, PLAN_PRICING } from "@/lib/razorpay";
+import { razorpay, getRazorpayKeyId, getRazorpayKeySecret, PLAN_PRICING } from "@/lib/razorpay";
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,7 +10,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    const keyId = getRazorpayKeyId();
+    const keySecret = getRazorpayKeySecret();
+
+    if (!keyId || !keySecret) {
       return NextResponse.json(
         { error: "Razorpay credentials are not configured on the server." },
         { status: 500 }
@@ -46,7 +49,7 @@ export async function POST(req: NextRequest) {
       orderId: order.id,
       amount: order.amount,
       currency: order.currency,
-      keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID,
+      keyId: keyId,
       plan: plan,
       planName: planConfig.name,
     });

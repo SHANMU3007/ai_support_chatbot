@@ -3,7 +3,7 @@ import crypto from "crypto";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { PLAN_PRICING } from "@/lib/razorpay";
+import { PLAN_PRICING, getRazorpayKeySecret } from "@/lib/razorpay";
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required payment fields" }, { status: 400 });
     }
 
-    const secret = process.env.RAZORPAY_KEY_SECRET || "";
+    const secret = getRazorpayKeySecret();
     if (!secret) {
       return NextResponse.json(
         { error: "Server missing Razorpay secret key configuration." },

@@ -1,8 +1,14 @@
 import Razorpay from "razorpay";
 
+export const getRazorpayKeyId = () =>
+  (process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "").trim();
+
+export const getRazorpayKeySecret = () =>
+  (process.env.RAZORPAY_KEY_SECRET || "").trim();
+
 export const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || "",
-  key_secret: process.env.RAZORPAY_KEY_SECRET || "",
+  key_id: getRazorpayKeyId(),
+  key_secret: getRazorpayKeySecret(),
 });
 
 export const PLAN_PRICING: Record<
