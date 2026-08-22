@@ -25,16 +25,16 @@ export interface AntigravityProps {
 }
 
 const AntigravityInner: React.FC<AntigravityProps> = ({
-  count = 220,
+  count = 260,
   magnetRadius = 10,
   ringRadius = 4.5,
   waveSpeed = 0.8,
   waveAmplitude = 0.8,
-  particleSize = 1,
+  particleSize = 0.5,
   lerpSpeed = 0.18,
   color = '#6366f1',
   autoAnimate = true,
-  particleVariance = 0.5,
+  particleVariance = 0.4,
   rotationSpeed = 0.2,
   depthFactor = 0.3,
   pulseSpeed = 2.5,
@@ -151,7 +151,7 @@ const AntigravityInner: React.FC<AntigravityProps> = ({
 
       dummy.position.set(p.cx, p.cy, p.cz);
 
-      const pulse = 1 + Math.sin(p.t * pulseSpeed) * 0.12 * particleVariance;
+      const pulse = 1 + Math.sin(p.t * pulseSpeed) * 0.1 * particleVariance;
       const finalScale = scaleMultiplier * pulse * particleSize;
       dummy.scale.set(finalScale, finalScale, finalScale);
       dummy.updateMatrix();
@@ -164,10 +164,10 @@ const AntigravityInner: React.FC<AntigravityProps> = ({
 
   return (
     <instancedMesh ref={meshRef} args={[undefined, undefined, count]}>
-      {particleShape === 'capsule' && <capsuleGeometry args={[0.04, 0.14, 4, 6]} />}
-      {particleShape === 'sphere' && <sphereGeometry args={[0.085, 10, 10]} />}
-      {particleShape === 'box' && <boxGeometry args={[0.08, 0.08, 0.08]} />}
-      {particleShape === 'tetrahedron' && <tetrahedronGeometry args={[0.1]} />}
+      {particleShape === 'capsule' && <capsuleGeometry args={[0.02, 0.08, 4, 6]} />}
+      {particleShape === 'sphere' && <sphereGeometry args={[0.032, 8, 8]} />}
+      {particleShape === 'box' && <boxGeometry args={[0.04, 0.04, 0.04]} />}
+      {particleShape === 'tetrahedron' && <tetrahedronGeometry args={[0.05]} />}
       <meshBasicMaterial color={color} transparent opacity={opacity} />
     </instancedMesh>
   );
