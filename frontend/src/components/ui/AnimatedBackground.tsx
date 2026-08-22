@@ -39,7 +39,7 @@ export function AnimatedBackground({
               repeat: Infinity,
               ease: "easeInOut",
             }}
-            className="absolute -top-32 left-1/4 w-96 h-96 rounded-full bg-gradient-to-tr from-indigo-400/20 via-purple-400/15 to-transparent blur-3xl"
+            className="absolute -top-32 left-1/4 w-96 h-96 rounded-full bg-gradient-to-tr from-indigo-500/10 via-slate-400/5 to-transparent blur-3xl"
           />
           <motion.div
             animate={{
@@ -52,7 +52,7 @@ export function AnimatedBackground({
               repeat: Infinity,
               ease: "easeInOut",
             }}
-            className="absolute top-1/3 -right-20 w-96 h-96 rounded-full bg-gradient-to-br from-cyan-400/20 via-blue-500/15 to-transparent blur-3xl"
+            className="absolute top-1/3 -right-20 w-96 h-96 rounded-full bg-gradient-to-br from-blue-500/10 via-indigo-500/5 to-transparent blur-3xl"
           />
           <motion.div
             animate={{
@@ -64,7 +64,7 @@ export function AnimatedBackground({
               repeat: Infinity,
               ease: "easeInOut",
             }}
-            className="absolute -bottom-20 left-1/3 w-80 h-80 rounded-full bg-gradient-to-tr from-pink-400/15 via-rose-300/10 to-transparent blur-3xl"
+            className="absolute -bottom-20 left-1/3 w-80 h-80 rounded-full bg-gradient-to-tr from-slate-400/10 via-indigo-400/5 to-transparent blur-3xl"
           />
         </>
       )}

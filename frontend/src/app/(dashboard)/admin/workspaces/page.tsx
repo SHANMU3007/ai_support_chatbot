@@ -211,11 +211,11 @@ export default function AdminWorkspacesPage() {
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-gray-900 text-base">{user.name || user.email}</span>
                       {user.role === "ADMIN" ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-700 border border-purple-200">
-                          <Shield className="h-3 w-3" /> ADMIN
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-900 text-white border border-slate-800 shadow-xs">
+                          <Shield className="h-3 w-3 text-indigo-400" /> ADMIN
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
                           WORKSPACE
                         </span>
                       )}

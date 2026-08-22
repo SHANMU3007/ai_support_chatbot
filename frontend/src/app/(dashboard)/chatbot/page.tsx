@@ -52,8 +52,8 @@ export default async function ChatbotsPage() {
           <div className="flex items-center gap-2.5">
             <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">AI Chatbots</h1>
             {isAdmin && (
-              <span className="inline-flex items-center gap-1 text-xs font-bold bg-purple-50 text-purple-700 px-2.5 py-0.5 rounded-full border border-purple-200">
-                <Shield className="h-3 w-3" /> Platform Admin
+              <span className="inline-flex items-center gap-1 text-xs font-semibold bg-slate-900 text-white px-2.5 py-0.5 rounded-full border border-slate-800 shadow-xs">
+                <Shield className="h-3 w-3 text-indigo-400" /> Platform Admin
               </span>
             )}
           </div>

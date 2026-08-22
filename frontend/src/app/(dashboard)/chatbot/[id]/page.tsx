@@ -57,7 +57,7 @@ export default async function ChatbotDetailPage({ params }: Props) {
               {chatbot.isActive ? "Active" : "Inactive"}
             </Badge>
             {isAdmin && (
-              <span className="text-xs bg-purple-100 text-purple-700 font-bold px-2 py-0.5 rounded-full border border-purple-200">
+              <span className="text-xs bg-slate-900 text-white font-medium px-2.5 py-0.5 rounded-full border border-slate-800 shadow-xs">
                 Owner: {chatbot.user.email}
               </span>
             )}

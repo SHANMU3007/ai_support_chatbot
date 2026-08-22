@@ -278,12 +278,12 @@ export function BillingSection({
                 key={plan.id}
                 className={`relative flex flex-col justify-between p-6 rounded-2xl border transition-all duration-200 ${
                   plan.popular
-                    ? "border-purple-500/50 bg-purple-950/10 shadow-md ring-1 ring-purple-500/20"
+                    ? "border-slate-800 bg-slate-950 text-white shadow-xl ring-1 ring-slate-800"
                     : "border-gray-200 bg-white"
                 } ${isCurrent ? "ring-2 ring-indigo-600 bg-indigo-50/20" : ""}`}
               >
                 {plan.popular && (
-                  <span className="absolute -top-2.5 right-6 bg-purple-600 text-white text-[11px] font-bold px-3 py-0.5 rounded-full tracking-wide uppercase">
+                  <span className="absolute -top-2.5 right-6 bg-slate-800 border border-slate-700 text-white text-[11px] font-bold px-3 py-0.5 rounded-full tracking-wide uppercase">
                     Most Popular
                   </span>
                 )}
@@ -291,10 +291,10 @@ export function BillingSection({
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <div className="p-2 rounded-lg bg-gray-100 text-gray-800">
+                      <div className={`p-2 rounded-lg ${plan.popular ? "bg-slate-800 text-white" : "bg-gray-100 text-gray-800"}`}>
                         <Icon className="h-4 w-4" />
                       </div>
-                      <h3 className="font-bold text-base text-gray-900">{plan.name}</h3>
+                      <h3 className={`font-bold text-base ${plan.popular ? "text-white" : "text-gray-900"}`}>{plan.name}</h3>
                     </div>
                     {isCurrent && (
                       <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
@@ -303,32 +303,27 @@ export function BillingSection({
                     )}
                   </div>
 
-                  <p className="text-xs text-gray-500 mb-4">{plan.tagline}</p>
+                  <p className={`text-xs mt-1 ${plan.popular ? "text-slate-400" : "text-gray-500"}`}>{plan.tagline}</p>
 
-                  <div className="flex items-baseline gap-1 mb-5">
-                    <span className="text-3xl font-black text-gray-900">{plan.price}</span>
-                    <span className="text-xs text-gray-500">/{plan.period}</span>
+                  <div className="mt-4 flex items-baseline gap-1">
+                    <span className={`text-3xl font-extrabold ${plan.popular ? "text-white" : "text-gray-900"}`}>
+                      {plan.price}
+                    </span>
+                    <span className={`text-xs ${plan.popular ? "text-slate-400" : "text-gray-500"}`}>/{plan.period}</span>
                   </div>
 
-                  <ul className="space-y-2.5 mb-6">
-                    {plan.features.map((feat, idx) => (
-                      <li key={idx} className="flex items-center gap-2 text-xs text-gray-600">
-                        <Check className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
-                        <span>{feat}</span>
-                      </li>
+                  <div className="mt-6 pt-6 border-t border-gray-100 space-y-2.5 flex-1">
+                    {plan.features.map((feature, idx) => (
+                      <div key={idx} className="flex items-start gap-2 text-xs">
+                        <Check className="h-4 w-4 text-indigo-500 flex-shrink-0 mt-0.5" />
+                        <span className={plan.popular ? "text-slate-300" : "text-gray-600"}>{feature}</span>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
 
-                <div>
+                <div className="mt-6">
                   {isCurrent ? (
-                    <button
-                      disabled
-                      className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold bg-gray-100 text-gray-500 cursor-default"
-                    >
-                      Current Plan
-                    </button>
-                  ) : plan.id === "FREE" ? (
                     <button
                       disabled
                       className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold bg-gray-100 text-gray-400 cursor-not-allowed"
@@ -339,11 +334,7 @@ export function BillingSection({
                     <button
                       onClick={() => handleUpgrade(plan.id as "STARTER" | "PRO" | "ENTERPRISE")}
                       disabled={loadingPlan !== null}
-                      className={`w-full py-2.5 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all duration-200 shadow-sm ${
-                        plan.popular
-                          ? "bg-purple-600 hover:bg-purple-700 text-white"
-                          : "bg-gray-900 hover:bg-black text-white"
-                      } disabled:opacity-50`}
+                      className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all duration-200 shadow-sm bg-slate-900 hover:bg-slate-800 text-white disabled:opacity-50"
                     >
                       {isLoading ? (
                         <>

@@ -59,8 +59,8 @@ export default async function ConversationsPage() {
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold text-gray-900">Conversations</h1>
             {isAdmin && (
-              <span className="inline-flex items-center gap-1 text-xs font-bold bg-purple-100 text-purple-700 px-2.5 py-0.5 rounded-full border border-purple-200">
-                <Shield className="h-3 w-3" /> Full Admin Access
+              <span className="inline-flex items-center gap-1 text-xs font-semibold bg-slate-900 text-white px-2.5 py-0.5 rounded-full border border-slate-800 shadow-xs">
+                <Shield className="h-3 w-3 text-indigo-400" /> Full Admin Access
               </span>
             )}
           </div>

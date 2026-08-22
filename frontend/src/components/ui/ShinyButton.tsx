@@ -26,13 +26,15 @@ export function ShinyButton({
 
   const variantStyles = {
     primary:
-      "bg-slate-950 text-white hover:bg-slate-900 shadow-md shadow-slate-950/20 border border-slate-800",
+      "bg-slate-950 text-white hover:bg-slate-900 shadow-sm border border-slate-800",
     secondary:
-      "bg-white text-slate-900 hover:bg-slate-50 border border-slate-200 shadow-sm",
+      "bg-white text-slate-800 hover:bg-slate-50 border border-slate-200/90 shadow-xs",
     glow:
-      "bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 border border-indigo-400/30",
+      "bg-slate-950 text-white hover:bg-slate-900 shadow-md shadow-slate-950/25 border border-slate-800 hover:border-slate-700",
+    indigo:
+      "bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-600/20 border border-indigo-500",
     outline:
-      "bg-transparent text-slate-900 border-2 border-slate-900 hover:bg-slate-900 hover:text-white",
+      "bg-transparent text-slate-900 border border-slate-300 hover:bg-slate-100",
   }[variant];
 
   return (

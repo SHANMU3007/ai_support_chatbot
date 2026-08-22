@@ -39,8 +39,8 @@ export function Header({ user }: Props) {
       <div className="flex items-center gap-3">
         {/* Role Badge Indicator */}
         {isDarkAdmin ? (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200/80 shadow-xs">
-            <Shield className="h-3.5 w-3.5" /> Platform Admin Center
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-900 text-white shadow-xs">
+            <Shield className="h-3.5 w-3.5 text-indigo-400" /> Platform Admin Center
           </span>
         ) : (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 shadow-xs">
@@ -62,8 +62,8 @@ export function Header({ user }: Props) {
                 <AvatarFallback
                   className={`rounded-xl text-white text-xs font-bold ${
                     isDarkAdmin
-                      ? "bg-purple-700"
-                      : "bg-gradient-to-tr from-indigo-600 to-purple-600"
+                      ? "bg-slate-900"
+                      : "bg-indigo-600"
                   }`}
                 >
                   {initials}
@@ -93,9 +93,9 @@ export function Header({ user }: Props) {
 
             {isDarkAdmin && (
               <>
-                <DropdownMenuItem asChild className="rounded-xl cursor-pointer hover:bg-purple-50 text-purple-700 font-semibold text-xs">
+                <DropdownMenuItem asChild className="rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold text-xs text-slate-900 dark:text-slate-100">
                   <Link href="/admin" className="flex items-center gap-2">
-                    <Shield className="h-4 w-4" />
+                    <Shield className="h-4 w-4 text-indigo-500" />
                     Platform Admin Center
                   </Link>
                 </DropdownMenuItem>

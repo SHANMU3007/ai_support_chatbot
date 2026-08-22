@@ -205,14 +205,14 @@ export default function LandingPage() {
 
         {/* Hero Interactive Preview Card */}
         <div id="demo" className="relative max-w-4xl mx-auto">
-          <div className="absolute -inset-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-3xl blur-xl opacity-30 animate-pulse" />
+          <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/20 via-slate-500/10 to-indigo-500/20 rounded-3xl blur-xl opacity-40" />
           
           <div className="relative rounded-2xl border border-slate-200/80 bg-white/90 backdrop-blur-xl shadow-2xl overflow-hidden">
             {/* Mock Header */}
             <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between border-b border-slate-800">
               <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-rose-500/80" />
-                <div className="w-3 h-3 rounded-full bg-amber-500/80" />
+                <div className="w-3 h-3 rounded-full bg-slate-700" />
+                <div className="w-3 h-3 rounded-full bg-slate-700" />
                 <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
                 <span className="ml-2 text-xs font-medium text-slate-400">
                   Live Preview: Conciergo Assistant
@@ -235,8 +235,8 @@ export default function LandingPage() {
 
               {/* Bot response */}
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white flex-shrink-0 shadow-sm shadow-indigo-600/30">
-                  <Bot className="h-4 w-4" />
+                <div className="w-8 h-8 rounded-xl bg-slate-900 flex items-center justify-center text-white flex-shrink-0 shadow-sm">
+                  <Bot className="h-4 w-4 text-indigo-400" />
                 </div>
                 <div className="bg-white border border-slate-200/90 p-4 rounded-2xl rounded-tl-xs text-sm text-slate-800 max-w-lg shadow-sm space-y-2">
                   <p className="leading-relaxed">
@@ -256,13 +256,13 @@ export default function LandingPage() {
 
               {/* Floating feature pills on the preview */}
               <div className="pt-4 flex flex-wrap gap-2 justify-center">
-                <span className="px-3 py-1 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full text-xs font-medium">
+                <span className="px-3 py-1 bg-slate-100 text-slate-700 border border-slate-200 rounded-full text-xs font-medium">
                   ⚡ 1.2s avg response
                 </span>
                 <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-full text-xs font-medium">
                   🛡️ 100% Vector RAG Accuracy
                 </span>
-                <span className="px-3 py-1 bg-purple-50 text-purple-700 border border-purple-100 rounded-full text-xs font-medium">
+                <span className="px-3 py-1 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full text-xs font-medium">
                   🎙️ Voice & Text-to-Speech
                 </span>
               </div>
@@ -322,15 +322,15 @@ export default function LandingPage() {
               icon: MessageSquare,
               title: "Contextual RAG AI",
               desc: "Powered by Groq and Qdrant. Context-grounded generation ensures zero hallucinations and trustworthy answers.",
-              color: "text-purple-600",
-              bgColor: "bg-purple-50 border-purple-100",
+              color: "text-indigo-600",
+              bgColor: "bg-indigo-50 border-indigo-100",
             },
             {
               icon: Globe,
               title: "Universal Embed & Widget",
               desc: "Deploy to WordPress, Shopify, Next.js, or React with a single copy-paste script tag. Fully customizable theme.",
-              color: "text-blue-600",
-              bgColor: "bg-blue-50 border-blue-100",
+              color: "text-slate-700",
+              bgColor: "bg-slate-100 border-slate-200",
             },
             {
               icon: BarChart3,
@@ -350,8 +350,8 @@ export default function LandingPage() {
               icon: Shield,
               title: "Enterprise Grade Silos",
               desc: "Strict workspace multi-tenancy, rate limiting, data encryption at rest, and complete privacy compliance.",
-              color: "text-rose-600",
-              bgColor: "bg-rose-50 border-rose-100",
+              color: "text-slate-700",
+              bgColor: "bg-slate-100 border-slate-200",
             },
           ].map((feature) => (
             <SpotlightCard
@@ -379,7 +379,7 @@ export default function LandingPage() {
       <section id="pricing" className="py-24 px-4 bg-gradient-to-b from-transparent via-slate-100/50 to-transparent">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center max-w-2xl mx-auto mb-16">
-            <BadgePill variant="gradient" className="mb-4">
+            <BadgePill variant="neutral" className="mb-4">
               <span>Predictable Pricing</span>
             </BadgePill>
             <h2 className="text-3xl md:text-5xl font-extrabold text-slate-950 tracking-tight mb-4">
@@ -472,7 +472,7 @@ export default function LandingPage() {
                 }`}
               >
                 {plan.highlighted && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold text-xs px-3.5 py-1 rounded-full shadow-md">
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-slate-900 border border-slate-700 text-white font-semibold text-xs px-3.5 py-1 rounded-full shadow-sm">
                     Most Popular
                   </div>
                 )}

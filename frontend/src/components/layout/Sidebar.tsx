@@ -44,8 +44,8 @@ export function Sidebar({ role }: { role?: "ADMIN" | "WORKSPACE" }) {
       {/* Logo */}
       <div className="h-16 flex items-center px-6 border-b border-slate-800/80">
         <Link href="/dashboard" className="flex items-center gap-3 group">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center text-white shadow-md shadow-indigo-600/30 group-hover:scale-105 transition-transform">
-            <Bot className="h-5 w-5" />
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-slate-900 via-indigo-950 to-indigo-900 border border-indigo-500/30 flex items-center justify-center text-white shadow-md shadow-indigo-950/40 group-hover:scale-105 transition-transform">
+            <Bot className="h-5 w-5 text-indigo-300" />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
@@ -65,10 +65,10 @@ export function Sidebar({ role }: { role?: "ADMIN" | "WORKSPACE" }) {
         {role === "ADMIN" && (
           <div className="space-y-1.5">
             <div className="flex items-center justify-between px-3 mb-2">
-              <p className="text-[10px] uppercase font-bold tracking-wider text-purple-400">
+              <p className="text-[10px] uppercase font-bold tracking-wider text-indigo-400">
                 Platform Admin
               </p>
-              <Sparkles className="h-3 w-3 text-purple-400" />
+              <Sparkles className="h-3 w-3 text-indigo-400" />
             </div>
             {adminNavItems.map(({ href, label, icon: Icon }) => {
               const active = pathname === href || (href !== "/admin" && pathname.startsWith(href));
@@ -79,11 +79,11 @@ export function Sidebar({ role }: { role?: "ADMIN" | "WORKSPACE" }) {
                   className={cn(
                     "flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200",
                     active
-                      ? "bg-purple-600/20 text-purple-300 border border-purple-500/40 shadow-sm shadow-purple-600/20"
+                      ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/40 shadow-sm shadow-indigo-950/40"
                       : "text-slate-400 hover:bg-slate-900 hover:text-slate-100"
                   )}
                 >
-                  <Icon className={cn("h-4 w-4", active ? "text-purple-400" : "text-slate-500")} />
+                  <Icon className={cn("h-4 w-4", active ? "text-indigo-400" : "text-slate-500")} />
                   {label}
                 </Link>
               );

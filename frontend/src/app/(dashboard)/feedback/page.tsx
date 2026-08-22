@@ -74,8 +74,8 @@ export default async function FeedbackResolutionPage() {
         </div>
 
         {isAdmin && (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 font-bold text-xs border border-purple-200 dark:border-purple-800">
-            <ShieldCheck className="h-3.5 w-3.5" />
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 text-white font-medium text-xs border border-slate-800 shadow-xs">
+            <ShieldCheck className="h-3.5 w-3.5 text-indigo-400" />
             Platform Admin Oversight
           </span>
         )}

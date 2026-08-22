@@ -515,17 +515,17 @@ export default function ChatbotSettingsPage({ params }: Props) {
                 onClick={() => update("privacyLevel", "ZERO_RETENTION")}
                 className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex items-start gap-3 ${
                   form.privacyLevel === "ZERO_RETENTION"
-                    ? "border-purple-600 bg-purple-50/50 ring-1 ring-purple-500/20"
+                    ? "border-slate-900 bg-slate-50 ring-1 ring-slate-900/10"
                     : "border-gray-200 hover:border-gray-300"
                 }`}
               >
-                <div className="p-1.5 rounded-lg bg-purple-100 text-purple-700 mt-0.5 shrink-0">
+                <div className={`p-1.5 rounded-lg mt-0.5 shrink-0 ${form.privacyLevel === "ZERO_RETENTION" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-700"}`}>
                   <EyeOff className="h-4 w-4" />
                 </div>
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
                     <p className="text-xs font-bold text-gray-900">Zero-Retention Mode (Strict Zero-Knowledge)</p>
-                    <span className="text-[10px] font-bold bg-purple-100 text-purple-800 px-1.5 py-0.2 rounded-sm">SOC-2 Strict</span>
+                    <span className="text-[10px] font-bold bg-slate-100 text-slate-800 px-1.5 py-0.2 rounded-sm border border-slate-200">SOC-2 Strict</span>
                   </div>
                   <p className="text-[11px] text-gray-600 leading-relaxed">
                     Zero chat transcripts are persisted in the database. Conversations are processed ephemerally in-memory and streamed directly. Admins cannot view raw user chats.

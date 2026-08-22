@@ -106,8 +106,8 @@ export default async function AnalyticsPage() {
         </div>
 
         {isAdmin && (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-purple-100 text-purple-700 border border-purple-200 self-start sm:self-auto">
-            <Shield className="h-4 w-4" /> Global Platform View
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-900 text-white border border-slate-800 shadow-xs self-start sm:self-auto">
+            <Shield className="h-4 w-4 text-indigo-400" /> Global Platform View
           </span>
         )}
       </div>

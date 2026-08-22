@@ -24,7 +24,7 @@ export function BadgePill({
     emerald: "bg-emerald-50/80 border-emerald-200/80 text-emerald-700 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300",
     amber: "bg-amber-50/80 border-amber-200/80 text-amber-700 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-300",
     neutral: "bg-slate-100/90 border-slate-200 text-slate-800 dark:bg-slate-800/80 dark:border-slate-700 dark:text-slate-200",
-    gradient: "bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 border-purple-200/60 text-purple-900 shadow-sm",
+    gradient: "bg-indigo-50/90 border-indigo-200/80 text-indigo-900 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-200 shadow-xs",
   }[variant];
 
   const dotColors = {
@@ -32,7 +32,7 @@ export function BadgePill({
     emerald: "bg-emerald-500",
     amber: "bg-amber-500",
     neutral: "bg-slate-500",
-    gradient: "bg-purple-600",
+    gradient: "bg-indigo-600",
   }[variant];
 
   return (
