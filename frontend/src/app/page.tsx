@@ -10,6 +10,7 @@ import { AnimatedBackground } from "@/components/ui/AnimatedBackground";
 import { BadgePill } from "@/components/ui/BadgePill";
 import { SplitText } from "@/components/ui/SplitText";
 import ParticleText from "@/components/ParticleText/ParticleText";
+import Antigravity from "@/components/Antigravity/Antigravity";
 import {
   MessageSquare,
   Zap,
@@ -39,6 +40,22 @@ export default function LandingPage() {
 
   return (
     <div className="relative min-h-screen bg-slate-50/50 text-slate-900 selection:bg-indigo-500 selection:text-white overflow-hidden">
+      {/* 3D Antigravity Particle Field in Ambient Background */}
+      <div className="absolute inset-0 pointer-events-none z-0 opacity-40 overflow-hidden">
+        <Antigravity
+          count={220}
+          particleSize={1.5}
+          color="#6366f1"
+          particleShape="sphere"
+          waveSpeed={0.3}
+          waveAmplitude={0.8}
+          magnetRadius={12}
+          ringRadius={8}
+          autoAnimate={true}
+          fieldStrength={8}
+        />
+      </div>
+
       {/* Dynamic Aurora Ambient Background */}
       <AnimatedBackground pattern="dots" showOrbs={true} />
 
