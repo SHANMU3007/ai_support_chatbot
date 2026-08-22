@@ -50,7 +50,7 @@ export default function LandingPage() {
             </div>
             <div className="flex flex-col">
               <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-                SupportIQ
+                Conciergo
               </span>
             </div>
           </Link>
@@ -108,14 +108,14 @@ export default function LandingPage() {
           <div className="flex justify-center mb-6">
             <BadgePill variant="gradient">
               <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
-              <span>SupportIQ 2.0 • AI-Native Customer Support Platform</span>
+              <span>Conciergo 2.0 • Autonomous Support Concierge Platform</span>
             </BadgePill>
           </div>
 
           <div className="mb-6">
             <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold text-slate-950 tracking-tight leading-[1.1]">
               <SplitText
-                text="Intelligent Customer Support That Never Sleeps."
+                text="Turn Your Knowledge into a 24/7 AI Support Concierge."
                 className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight leading-[1.1]"
                 delay={28}
               />
@@ -128,7 +128,7 @@ export default function LandingPage() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="text-lg md:text-xl text-slate-600 leading-relaxed font-normal mb-10 max-w-2xl mx-auto"
           >
-            Upload your company docs, ingest your help center, and deploy custom RAG-powered AI agents that answer queries accurately with voice, real-time citation, and human escalation.
+            Upload company docs, ingest your help center, and deploy custom RAG-powered AI concierges that answer queries accurately with voice playback, real-time citations, and smart human escalation.
           </motion.p>
 
           <motion.div
@@ -175,7 +175,7 @@ export default function LandingPage() {
                 <div className="w-3 h-3 rounded-full bg-amber-500/80" />
                 <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
                 <span className="ml-2 text-xs font-medium text-slate-400">
-                  Live Preview: SupportIQ Assistant
+                  Live Preview: Conciergo Assistant
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -189,7 +189,7 @@ export default function LandingPage() {
               {/* User message */}
               <div className="flex justify-end">
                 <div className="bg-slate-900 text-white px-4 py-3 rounded-2xl rounded-tr-xs text-sm max-w-md shadow-sm">
-                  How does SupportIQ handle custom domain embedding and webhook routing?
+                  How does Conciergo handle custom domain embedding and webhook routing?
                 </div>
               </div>
 
@@ -200,7 +200,7 @@ export default function LandingPage() {
                 </div>
                 <div className="bg-white border border-slate-200/90 p-4 rounded-2xl rounded-tl-xs text-sm text-slate-800 max-w-lg shadow-sm space-y-2">
                   <p className="leading-relaxed">
-                    SupportIQ embeds directly into any website using a single lightweight script tag. For routing:
+                    Conciergo embeds directly into any website using a single lightweight script tag. For routing:
                   </p>
                   <ul className="space-y-1 text-xs text-slate-600 list-disc list-inside">
                     <li>Supports custom CNAME domain mappings</li>
@@ -499,8 +499,8 @@ export default function LandingPage() {
               a: "In under 5 minutes! Simply create an account, upload your knowledge documents (PDFs, docs, or web URLs), customize your bot's styling, and copy our one-line embed script tag into your website.",
             },
             {
-              q: "Does SupportIQ prevent hallucinations?",
-              a: "Yes. SupportIQ uses high-precision Vector Retrieval-Augmented Generation (RAG). The AI strictly grounds its answers in your verified documentation and can provide direct citations.",
+              q: "Does Conciergo prevent hallucinations?",
+              a: "Yes. Conciergo uses high-precision Vector Retrieval-Augmented Generation (RAG). The AI strictly grounds its answers in your verified documentation and can provide direct citations.",
             },
             {
               q: "Can I customize the colors, logos, and language?",
@@ -508,7 +508,7 @@ export default function LandingPage() {
             },
             {
               q: "How does human escalation work?",
-              a: "When a customer requests human assistance or expresses negative sentiment, SupportIQ triggers an automated webhook that notifies your support team via Slack, Discord, or n8n workflow.",
+              a: "When a customer requests human assistance or expresses negative sentiment, Conciergo triggers an automated webhook that notifies your support team via Slack, Discord, or n8n workflow.",
             },
           ].map((faq, index) => (
             <div
@@ -544,10 +544,10 @@ export default function LandingPage() {
 
           <div className="relative z-10 text-center max-w-2xl mx-auto space-y-6">
             <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight">
-              Ready to automate customer support effortlessly?
+              Ready to deploy your 24/7 AI support concierge?
             </h2>
             <p className="text-slate-400 text-sm md:text-base font-normal">
-              Join forward-thinking companies deploying 24/7 intelligent chatbots with SupportIQ.
+              Join forward-thinking companies deploying 24/7 intelligent chatbots and automated service with Conciergo.
             </p>
             <div className="pt-2 flex justify-center">
               <Link href="/register">
@@ -568,11 +568,11 @@ export default function LandingPage() {
             <div className="w-7 h-7 rounded-lg bg-slate-950 flex items-center justify-center shadow-xs">
               <Bot className="h-4 w-4 text-indigo-400" />
             </div>
-            <span className="font-bold text-slate-900 text-sm">SupportIQ Platform</span>
+            <span className="font-bold text-slate-900 text-sm">Conciergo Platform</span>
           </div>
 
           <p className="text-xs text-slate-500">
-            © {new Date().getFullYear()} SupportIQ Platform. Built for Enterprise Reliability.
+            © {new Date().getFullYear()} Conciergo Platform. Built for Enterprise Reliability.
           </p>
 
           <div className="flex items-center gap-6 text-xs text-slate-500 font-medium">

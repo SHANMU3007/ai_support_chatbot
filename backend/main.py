@@ -51,7 +51,7 @@ def _hdr(msg: str) -> None: _safe_print(f"\n{BOLD}{CYN}{msg}{RST}")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    _hdr("══════════  SupportIQ Backend  ══════════")
+    _hdr("══════════  Conciergo Backend  ══════════")
 
     # ── 1. Config ─────────────────────────────────────────────────────────────
     _wait("Loading configuration …")
@@ -147,12 +147,12 @@ async def lifespan(app: FastAPI):
             await stop_all_bots()
         except Exception:
             pass
-        print(f"\n{YLW}  ⏹  SupportIQ Backend shutting down …{RST}", flush=True)
+        print(f"\n{YLW}  ⏹  Conciergo Backend shutting down …{RST}", flush=True)
 
 
 app = FastAPI(
-    title="ChatBot AI Backend",
-    description="RAG-powered AI customer-support engine",
+    title="Conciergo Backend",
+    description="RAG-powered AI customer concierge engine",
     version="1.0.0",
     lifespan=lifespan,
 )

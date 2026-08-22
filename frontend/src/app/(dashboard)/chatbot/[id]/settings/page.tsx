@@ -677,7 +677,7 @@ export default function ChatbotSettingsPage({ params }: Props) {
                 </button>
               </div>
               <p className="text-[10px] text-gray-400 text-center mt-2">
-                Powered by <span className="font-medium">SupportIQ</span> · Live Preview
+                Powered by <span className="font-medium">Conciergo</span> · Live Preview
               </p>
             </div>
           </div>

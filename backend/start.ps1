@@ -1,4 +1,4 @@
-# SupportIQ Backend - launch script with pre-flight status checks
+# Conciergo Backend - launch script with pre-flight status checks
 # Usage:  .\start.ps1
 
 function OK   ($m) { Write-Host "  [OK]   $m" -ForegroundColor Green  }
@@ -6,7 +6,7 @@ function WAIT ($m) { Write-Host "  [ . ]  $m" -ForegroundColor Yellow }
 function FAIL ($m) { Write-Host "  [FAIL] $m" -ForegroundColor Red    }
 function HDR  ($m) { Write-Host "`n=====  $m  =====" -ForegroundColor Cyan }
 
-HDR "SupportIQ - Pre-flight Checks"
+HDR "Conciergo - Pre-flight Checks"
 
 # 1. venv
 $PYTHON = "D:\ai-support-chatbot\.venv\Scripts\python.exe"
@@ -73,8 +73,8 @@ try {
     FAIL "ChromaDB NOT reachable - run:  docker compose up chromadb -d"
 }
 
-HDR "All checks done - starting SupportIQ Backend on :8000"
+HDR "All checks done - starting Conciergo Backend on :8000"
 Write-Host ""
 
 Set-Location $ROOT
-& $PYTHON -m uvicorn main:app --reload --port 8000
+& $PYTHON -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload

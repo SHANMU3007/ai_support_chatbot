@@ -156,7 +156,7 @@ export function BillingSection({
         key: orderData.keyId,
         amount: orderData.amount,
         currency: orderData.currency || "INR",
-        name: "SupportIQ AI Platform",
+        name: "Conciergo AI Platform",
         description: `Upgrade to ${orderData.planName || planId} Plan`,
         order_id: orderData.orderId,
         prefill: {

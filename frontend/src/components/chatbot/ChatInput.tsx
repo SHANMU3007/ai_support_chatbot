@@ -156,7 +156,7 @@ export function ChatInput({ onSend, disabled, primaryColor, language = "en" }: P
       </div>
 
       <div className="flex items-center justify-between text-[10px] text-slate-400 dark:text-slate-500 px-1 mt-2 select-none">
-        <span>Powered by <strong className="font-semibold text-slate-500 dark:text-slate-400">SupportIQ</strong></span>
+        <span>Powered by <strong className="font-semibold text-slate-500 dark:text-slate-400">Conciergo</strong></span>
         <span>Press <kbd className="px-1 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[9px] font-mono">Enter ↵</kbd></span>
       </div>
     </div>

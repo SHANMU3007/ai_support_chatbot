@@ -252,6 +252,108 @@ def _extract_text(soup: BeautifulSoup) -> str:
     return "\n".join(combined_parts)
 
 
+def _extract_js_bundle_text(js_code: str) -> list[str]:
+    """
+    Extract human-readable natural language strings, project info,
+    and portfolio details from minified JavaScript bundles (Vite, React, Vue, Webpack).
+    """
+    pattern = re.compile(r'(?:["`\'])([^"`\'\r\n]{12,1200})(?:["`\'])')
+    raw_strings = pattern.findall(js_code)
+
+    extracted = []
+    bad_tokens = [
+        "$$typeof", "defaultProps", "displayName", "useMemo", "useEffect",
+        "useState", "createElement", "cloneElement", "forwardRef",
+        "addEventListener", "removeEventListener", "setAttribute", "removeAttribute",
+        "appendChild", "removeChild", "innerHTML", "textContent",
+        "document.", "window.", "prototype.", "Object.", "Array.",
+        "var ", "const ", "let ", "function(", "function ", "return ",
+        "throw Error", "throw new", "Minified React", "ErrorEvent",
+        "encodeURIComponent", "decodeURIComponent", "JSON.stringify",
+        "RegExp", "MutationObserver", "IntersectionObserver", "requestAnimationFrame",
+        ".slice(", ".split(", ".join(", ".indexOf(", ".replace(",
+        "===", "!==", "&&", "||", "=>", "++", "--", "+=", "-=",
+        "keyframes", "cubic-bezier", "@media", "calc(", "!important",
+        "url(", "data:image", "charset=", "xmlns", "viewBox",
+        "px ", "rem ", "em ", "deg ", "ms ", "vh ", "vw ",
+        "abort canplay", "beforetoggle cancel", "change click focusin",
+        "compositionend", "compositionstart", "compositionupdate",
+        "focusout contextmenu", "wheelDelta", "reconcilerVersion",
+        "suppressContentEditableWarning", "externalResourcesRequired",
+        "DetermineComponentFrameRoot", "colorInterpolationFilters"
+    ]
+
+    for raw in raw_strings:
+        s = raw.strip()
+        if len(s) < 12:
+            continue
+
+        if s.startswith((".", ",", ";", ":", "?", "!", ")", "]", "}", "<", ">", "_", "[object")):
+            continue
+
+        if s.endswith((":", ";", "==", "!=", "&&", "||", "<", ">", "+", "-", "*", "/")):
+            continue
+
+        if any(token in s for token in bad_tokens):
+            continue
+
+        if any(bad in s for bad in [
+            "react.", "react-", "glyph-orientation", "glyphOrientation",
+            "colorInterpolation", "color-interpolation", "touchCancel touchEnd",
+            "auxClick beforeToggle", "pointerCancel pointerDown", "reconcilerVersion",
+            "externalResourcesRequired", "suppressContentEditable", "DetermineComponent",
+            "animationIterationCount", "accentHeight", "alignmentBaseline"
+        ]):
+            continue
+
+        symbol_count = sum(c in "{}()[]<>;:=+*/\\|^&%#$@~`" for c in s)
+        if symbol_count > 2:
+            continue
+
+        clean_chars = sum(c.isalnum() or c in ' ,.!?-:;\'"()/' for c in s)
+        if clean_chars / len(s) < 0.80:
+            continue
+
+        words = s.split()
+        if len(words) < 2 and len(s) < 25:
+            continue
+
+        # Filter out SVG paths
+        if s.startswith(("M", "m", "d=")) and any(c.isdigit() for c in s) and (
+            " " not in s[:6] or any(cmd in s for cmd in ["C", "c", "L", "l", "Z", "z", "H", "h", "V", "v"])
+        ):
+            continue
+
+        # Filter out pure numbers or coordinate sequences
+        num_count = sum(1 for w in words if re.match(r"^[-+]?[0-9.]+$", w))
+        if num_count > len(words) * 0.4:
+            continue
+
+        css_prefixes = (
+            "bg-", "text-", "p-", "px-", "py-", "pt-", "pb-", "m-", "mx-", "my-",
+            "w-", "h-", "flex", "grid", "border", "rounded", "hover:", "focus:",
+            "dark:", "items-", "justify-", "gap-", "transition", "duration",
+            "shadow", "z-", "opacity-", "cursor-", "overflow-"
+        )
+        css_word_count = sum(1 for w in words if w.startswith(css_prefixes) or w in ("relative", "absolute", "fixed", "hidden", "block", "inline-block"))
+        if css_word_count > len(words) * 0.30:
+            continue
+
+        if s.startswith(("http://", "https://", "/", "./", "../")):
+            continue
+
+        extracted.append(s)
+
+    seen = set()
+    cleaned = []
+    for item in extracted:
+        if item not in seen:
+            seen.add(item)
+            cleaned.append(item)
+
+    return cleaned
+
+
 def _is_cloudflare_challenge(resp: httpx.Response) -> bool:
     """Detect Cloudflare JS challenge / bot-block pages."""
     if resp.status_code in (403, 503):
@@ -573,7 +675,7 @@ class URLScraper:
 
         soup = BeautifulSoup(resp.text, "html.parser")
 
-        # Collect internal links before _extract_text destroys the tree
+        # Collect internal links and script URLs before _extract_text destroys the tree
         links: list[str] = []
         for a in soup.find_all("a", href=True):
             href = a["href"].strip()
@@ -583,12 +685,38 @@ class URLScraper:
             if _same_origin(absolute, base) and _is_crawlable(absolute):
                 links.append(absolute)
 
+        script_urls: list[str] = []
+        for script in soup.find_all("script", src=True):
+            src = (script.get("src") or "").strip()
+            if not src or src.startswith(("data:", "javascript:")):
+                continue
+            abs_script = urljoin(url, src)
+            if _same_origin(abs_script, base) and not any(
+                bad in abs_script for bad in ["google", "analytics", "gtag", "facebook", "clarity", "hotjar"]
+            ):
+                script_urls.append(abs_script)
+
         page_text = _extract_text(soup)
 
-        # If page is mostly empty (common with SPA shells),
-        # try fetching the /api/content or /__nextjs route if detectable
-        if len(page_text.strip()) < 200:
-            logger.debug("Sparse page detected at %s (%d chars) — may be SPA shell", url, len(page_text))
+        # If page is mostly empty (Client-Side Rendered SPA / React / Vite / Vue),
+        # fetch the client JavaScript bundles and extract readable strings & components
+        if len(page_text.strip()) < 300 and script_urls:
+            logger.info("Sparse SPA shell detected at %s (%d chars) — inspecting %d JS bundles", url, len(page_text), len(script_urls))
+            spa_snippets: list[str] = []
+            for s_url in script_urls[:4]:  # inspect top 4 JS bundles
+                try:
+                    js_resp = await client.get(s_url, timeout=10)
+                    if js_resp.status_code == 200:
+                        snippets = _extract_js_bundle_text(js_resp.text)
+                        if snippets:
+                            spa_snippets.extend(snippets)
+                except Exception as exc:
+                    logger.debug("Failed to inspect JS bundle %s: %s", s_url, exc)
+
+            if spa_snippets:
+                unique_snippets = list(dict.fromkeys(spa_snippets))
+                logger.info("Successfully extracted %d text snippets from SPA JS bundles for %s", len(unique_snippets), url)
+                page_text += "\n\n=== JAVASCRIPT & SPA APPLICATION CONTENT ===\n" + "\n".join(unique_snippets)
 
         return page_text, links
 
@@ -601,7 +729,33 @@ class URLScraper:
         resp = await _fetch_with_retry(client, url, timeout=timeout)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, "html.parser")
-        return _extract_text(soup)
+
+        script_urls: list[str] = []
+        for script in soup.find_all("script", src=True):
+            src = (script.get("src") or "").strip()
+            if src and not src.startswith(("data:", "javascript:")):
+                abs_script = urljoin(url, src)
+                if _same_origin(abs_script, url) and not any(
+                    bad in abs_script for bad in ["google", "analytics", "gtag", "facebook", "clarity", "hotjar"]
+                ):
+                    script_urls.append(abs_script)
+
+        page_text = _extract_text(soup)
+        if len(page_text.strip()) < 300 and script_urls:
+            spa_snippets: list[str] = []
+            for s_url in script_urls[:4]:
+                try:
+                    js_resp = await client.get(s_url, timeout=10)
+                    if js_resp.status_code == 200:
+                        snippets = _extract_js_bundle_text(js_resp.text)
+                        if snippets:
+                            spa_snippets.extend(snippets)
+                except Exception:
+                    pass
+            if spa_snippets:
+                page_text += "\n\n=== JAVASCRIPT & SPA APPLICATION CONTENT ===\n" + "\n".join(dict.fromkeys(spa_snippets))
+
+        return page_text
 
     # ── Utilities ───────────────────────────────────────────────────────────
 

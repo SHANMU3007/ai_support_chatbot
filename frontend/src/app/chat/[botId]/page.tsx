@@ -13,19 +13,19 @@ export async function generateMetadata({ params, searchParams }: Props) {
   try {
     const isPreview = searchParams?.preview === "true";
     const botId = params?.botId;
-    if (!botId) return { title: "SupportIQ Chat" };
+    if (!botId) return { title: "Conciergo Chat" };
 
     const chatbot = await prisma.chatbot.findFirst({
       where: isPreview ? { id: botId } : { id: botId, isActive: true },
     });
     return {
-      title: chatbot ? `${chatbot.name} | SupportIQ Assistant` : "SupportIQ Chat",
+      title: chatbot ? `${chatbot.name} | Conciergo Assistant` : "Conciergo Chat",
       description: chatbot
         ? `Chat with ${chatbot.name} - AI-powered customer assistant for ${chatbot.businessName}`
         : "AI Support Chat",
     };
   } catch {
-    return { title: "SupportIQ Chat" };
+    return { title: "Conciergo Chat" };
   }
 }
 

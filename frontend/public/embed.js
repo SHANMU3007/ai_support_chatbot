@@ -1,5 +1,5 @@
 /**
- * ChatBot AI – Standalone Embed Widget
+ * Conciergo AI – Standalone Embed Widget
  * Auto-generated at build time. Do not edit manually.
  * For the source template, see src/lib/embed-script.ts
  */
@@ -11,6 +11,8 @@
     return scripts[scripts.length - 1];
   })();
 
+  var config = window.ConciergoConfig || window.ChatBotAIConfig || {};
+
   var CHAT_BASE_URL = "";
   if (currentScript && currentScript.src) {
     try {
@@ -18,8 +20,8 @@
       CHAT_BASE_URL = url.origin;
     } catch(e) {}
   }
-  if (!CHAT_BASE_URL && window.ChatBotAIConfig && window.ChatBotAIConfig.baseUrl) {
-    CHAT_BASE_URL = window.ChatBotAIConfig.baseUrl;
+  if (!CHAT_BASE_URL && config.baseUrl) {
+    CHAT_BASE_URL = config.baseUrl;
   }
 
   var botId = document.currentScript
@@ -32,7 +34,7 @@
   }
 
   if (!botId) {
-    console.warn("[ChatBot AI] No data-bot-id found on embed script.");
+    console.warn("[Conciergo AI] No data-bot-id found on embed script.");
     return;
   }
 
@@ -43,8 +45,8 @@
     var colorScript = document.querySelector("script[data-color]");
     if (colorScript) primaryColor = colorScript.getAttribute("data-color") || primaryColor;
   }
-  if (window.ChatBotAIConfig && window.ChatBotAIConfig.primaryColor) {
-    primaryColor = window.ChatBotAIConfig.primaryColor;
+  if (config.primaryColor) {
+    primaryColor = config.primaryColor;
   }
 
   var buttonSize = 56;

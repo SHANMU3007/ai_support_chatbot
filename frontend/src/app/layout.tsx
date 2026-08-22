@@ -7,9 +7,9 @@ import { Toaster } from "@/components/ui/toaster";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "SupportIQ — Intelligent Customer Support, Instantly",
+  title: "Conciergo — 24/7 AI Customer Support Concierge",
   description:
-    "Add a smart support chatbot to your website in minutes. Upload your FAQs and let SupportIQ handle the rest — intelligent, instant, always on.",
+    "Deploy your autonomous AI support concierge in minutes. Train custom RAG agents on your company knowledge base and deliver instant, 24/7 customer care.",
 };
 
 export default function RootLayout({

@@ -7,7 +7,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <div className="mb-8 flex items-center gap-2">
         <Link href="/" className="flex items-center gap-2">
           <MessageSquare className="h-8 w-8 text-indigo-600" />
-          <span className="font-bold text-2xl text-gray-900">ChatBot AI</span>
+          <span className="font-bold text-2xl text-gray-900">Conciergo</span>
         </Link>
       </div>
       <div className="w-full max-w-md">{children}</div>

@@ -46,12 +46,12 @@ export function Sidebar({ role }: { role?: "ADMIN" | "WORKSPACE" }) {
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-white text-base tracking-tight">SupportIQ</span>
+              <span className="font-extrabold text-white text-base tracking-tight">Conciergo</span>
               <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
                 2.0
               </span>
             </div>
-            <p className="text-[10px] text-slate-400 font-medium leading-none mt-0.5">Enterprise Platform</p>
+            <p className="text-[10px] text-slate-400 font-medium leading-none mt-0.5">Support Concierge</p>
           </div>
         </Link>
       </div>

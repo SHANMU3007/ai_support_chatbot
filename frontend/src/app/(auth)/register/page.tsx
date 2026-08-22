@@ -56,7 +56,7 @@ export default function RegisterPage() {
     <Card>
       <CardHeader>
         <CardTitle>{portal === "admin" ? "Platform admin access" : "Create your chatbot workspace"}</CardTitle>
-        <CardDescription>{portal === "admin" ? "Admin accounts are provisioned for the SupportIQ team." : "Create, customize, and monitor chatbots for your business."}</CardDescription>
+        <CardDescription>{portal === "admin" ? "Admin accounts are provisioned for the Conciergo team." : "Create, customize, and monitor chatbots for your business."}</CardDescription>
       </CardHeader>
       <div className="px-6 grid grid-cols-2 gap-2">
         <button type="button" onClick={() => setPortal("admin")} className={`rounded-lg border p-3 text-left ${portal === "admin" ? "border-indigo-600 bg-indigo-50" : "border-gray-200"}`}>

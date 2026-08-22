@@ -38,7 +38,7 @@ async function updateWithRetry(
  */
 export async function POST(req: NextRequest) {
   const secret = req.headers.get("x-internal-secret");
-  if (secret !== "supportiq-internal") {
+  if (secret !== "conciergo-internal" && secret !== "supportiq-internal") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
