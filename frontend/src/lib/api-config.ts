@@ -1,16 +1,23 @@
 /**
- * Utility functions for API URL normalization and validation.
+ * Utility functions for API URL normalization and auto-environment detection.
  */
 
 /**
- * Returns a normalized FastAPI backend URL for any route path.
- * Solves ERR_INVALID_URL issues if FASTAPI_URL is missing http(s):// protocol.
+ * Returns the appropriate FastAPI backend URL based on environment:
+ * - Local development (`npm run dev`): connects to `http://localhost:8000`
+ * - Production / Hosting (Vercel / Railway): connects to `FASTAPI_URL` or Railway production endpoint.
  */
 export function getFastApiUrl(path: string = ""): string {
-  let baseUrl = process.env.FASTAPI_URL || "http://localhost:8000";
+  const isLocalDev =
+    process.env.NODE_ENV === "development" && !process.env.VERCEL;
+
+  let baseUrl = isLocalDev
+    ? process.env.FASTAPI_DEV_URL || "http://localhost:8000"
+    : process.env.FASTAPI_URL || "https://aisupportchatbot-production.up.railway.app";
+
   baseUrl = baseUrl.trim();
 
-  // If missing protocol prefix, default to https:// (or http:// for localhost/127.0.0.1)
+  // If missing protocol prefix, default to https:// (or http:// for localhost)
   if (!/^https?:\/\//i.test(baseUrl)) {
     if (baseUrl.startsWith("localhost") || baseUrl.startsWith("127.0.0.1")) {
       baseUrl = `http://${baseUrl}`;
