@@ -1,33 +1,48 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { ChatWindow } from "@/components/chatbot/ChatWindow";
-import { Bot, Moon, Sparkles } from "lucide-react";
+import { Bot, Moon } from "lucide-react";
 import { AnimatedBackground } from "@/components/ui/AnimatedBackground";
 
 interface Props {
   params: { botId: string };
-  searchParams: { preview?: string };
+  searchParams?: { preview?: string };
 }
 
 export async function generateMetadata({ params, searchParams }: Props) {
-  const isPreview = searchParams.preview === "true";
-  const chatbot = await prisma.chatbot.findFirst({
-    where: isPreview ? { id: params.botId } : { id: params.botId, isActive: true },
-  });
-  return {
-    title: chatbot ? `${chatbot.name} | SupportIQ Assistant` : "SupportIQ Chat",
-    description: chatbot
-      ? `Chat with ${chatbot.name} - AI-powered customer assistant for ${chatbot.businessName}`
-      : "AI Support Chat",
-  };
+  try {
+    const isPreview = searchParams?.preview === "true";
+    const botId = params?.botId;
+    if (!botId) return { title: "SupportIQ Chat" };
+
+    const chatbot = await prisma.chatbot.findFirst({
+      where: isPreview ? { id: botId } : { id: botId, isActive: true },
+    });
+    return {
+      title: chatbot ? `${chatbot.name} | SupportIQ Assistant` : "SupportIQ Chat",
+      description: chatbot
+        ? `Chat with ${chatbot.name} - AI-powered customer assistant for ${chatbot.businessName}`
+        : "AI Support Chat",
+    };
+  } catch {
+    return { title: "SupportIQ Chat" };
+  }
 }
 
 export default async function PublicChatPage({ params, searchParams }: Props) {
-  const isPreview = searchParams.preview === "true";
+  const isPreview = searchParams?.preview === "true";
+  const botId = params?.botId;
 
-  const chatbot = await prisma.chatbot.findUnique({
-    where: { id: params.botId },
-  });
+  if (!botId) notFound();
+
+  let chatbot = null;
+  try {
+    chatbot = await prisma.chatbot.findUnique({
+      where: { id: botId },
+    });
+  } catch (err) {
+    console.error("Failed to load chatbot:", err);
+  }
 
   if (!chatbot) notFound();
 
