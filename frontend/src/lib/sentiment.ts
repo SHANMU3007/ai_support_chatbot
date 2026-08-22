@@ -2,7 +2,7 @@ import Groq from "groq-sdk";
 import { prisma } from "@/lib/prisma";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || "" });
-const model = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+const model = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
 
 type SentimentResult = {
   label: "POSITIVE" | "NEUTRAL" | "NEGATIVE";

@@ -30,9 +30,9 @@ CRITICAL RULES & ZERO-HALLUCINATION GUARANTEE:
 
 # Ordered list of models to try – primary first, then cheaper fallbacks.
 _FALLBACK_MODELS = [
-    "llama-3.3-70b-versatile",
-    "llama-3.1-8b-instant",       # much cheaper, still good
-    "gemma2-9b-it",               # alternative fallback
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b",
+    "qwen/qwen3.6-27b",
 ]
 
 # Max context characters to send (prevent huge token usage)
@@ -105,7 +105,7 @@ class AIEngine:
                 messages.append({"role": turn["role"], "content": turn["content"]})
         messages.append({"role": "user", "content": message})
 
-        # Try primary model, then fallbacks on rate-limit errors
+        # Try primary model, then fallbacks on errors
         models_to_try = [settings.GROQ_MODEL] + [
             m for m in _FALLBACK_MODELS if m != settings.GROQ_MODEL
         ]
@@ -135,8 +135,8 @@ class AIEngine:
                     yield "\n[Response interrupted due to a technical issue.]"
                     return
                 last_error = exc
-                logger.exception("Groq API error on model %s", model)
-                break  # non-rate-limit errors → don't bother with fallbacks
+                logger.warning("Groq API error on model %s: %s — trying next fallback", model, exc)
+                continue  # try next fallback model
 
         # All models exhausted or a hard error occurred
         if isinstance(last_error, RateLimitError):
@@ -145,6 +145,7 @@ class AIEngine:
                 "Please try again in a few minutes. I apologize for the inconvenience!"
             )
         else:
+            logger.error("All Groq models exhausted. Last error: %s", last_error)
             yield "\n😞 Oops! I ran into a technical issue. Please try again in a moment."
 
     async def _try_stream(

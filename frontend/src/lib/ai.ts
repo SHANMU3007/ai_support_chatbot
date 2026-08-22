@@ -3,10 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { scoreSessionSentiment } from "@/lib/sentiment";
 
 const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY!,
+  apiKey: process.env.GROQ_API_KEY || "",
 });
 
-const GROQ_MODEL = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+const GROQ_MODEL = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
+const FALLBACK_MODELS = [GROQ_MODEL, "openai/gpt-oss-20b", "qwen/qwen3.6-27b"];
 
 interface StreamOptions {
   message: string;
@@ -62,61 +63,81 @@ STRICT RULES:
     async start(controller) {
       let fullResponse = "";
       let tokenCount = 0;
+      let streamedSuccessfully = false;
 
-      try {
-        const stream = await groq.chat.completions.create({
-          model: GROQ_MODEL,
-          max_tokens: 1024,
-          stream: true,
-          messages: [
-            { role: "system", content: fullSystemPrompt },
-            ...conversationHistory,
-            { role: "user", content: message },
-          ],
-        });
+      const modelsToTry = Array.from(new Set(FALLBACK_MODELS));
 
-        for await (const chunk of stream) {
-          const text = chunk.choices[0]?.delta?.content ?? "";
-          if (text) {
-            fullResponse += text;
-            // Send in both formats for maximum compatibility
-            const data = `data: ${JSON.stringify({ text, content: text })}\n\n`;
-            controller.enqueue(encoder.encode(data));
+      for (const model of modelsToTry) {
+        try {
+          const stream = await groq.chat.completions.create({
+            model,
+            max_tokens: 1024,
+            stream: true,
+            messages: [
+              { role: "system", content: fullSystemPrompt },
+              ...conversationHistory,
+              { role: "user", content: message },
+            ],
+          });
+
+          for await (const chunk of stream) {
+            const text = chunk.choices[0]?.delta?.content ?? "";
+            if (text) {
+              fullResponse += text;
+              // Send in both formats for maximum compatibility
+              const data = `data: ${JSON.stringify({ text, content: text })}\n\n`;
+              controller.enqueue(encoder.encode(data));
+            }
+            if (chunk.x_groq?.usage) {
+              tokenCount = chunk.x_groq.usage.completion_tokens ?? 0;
+            }
           }
-          if (chunk.x_groq?.usage) {
-            tokenCount = chunk.x_groq.usage.completion_tokens ?? 0;
+
+          streamedSuccessfully = true;
+          break; // successfully finished stream
+        } catch (err) {
+          console.warn(`Groq streaming error on model ${model}:`, err);
+          if (fullResponse) {
+            // Already streamed partial content, stop
+            break;
           }
         }
+      }
 
-        // Save assistant message to DB
-        await prisma.message.create({
-          data: {
-            sessionId,
-            role: "ASSISTANT",
-            content: fullResponse,
-            tokens: tokenCount,
-          },
-        });
-        await scoreSessionSentiment(sessionId);
+      if (streamedSuccessfully || fullResponse) {
+        try {
+          // Save assistant message to DB
+          await prisma.message.create({
+            data: {
+              sessionId,
+              role: "ASSISTANT",
+              content: fullResponse,
+              tokens: tokenCount,
+            },
+          });
+          await scoreSessionSentiment(sessionId);
 
-        // Check if escalation needed
-        const needsEscalation =
-          fullResponse.toLowerCase().includes("speak to a human") ||
-          fullResponse.toLowerCase().includes("connect you with") ||
-          fullResponse.toLowerCase().includes("connect with a human") ||
-          message.toLowerCase().includes("speak to human") ||
-          message.toLowerCase().includes("talk to a person");
+          // Check if escalation needed
+          const needsEscalation =
+            fullResponse.toLowerCase().includes("speak to a human") ||
+            fullResponse.toLowerCase().includes("connect you with") ||
+            fullResponse.toLowerCase().includes("connect with a human") ||
+            message.toLowerCase().includes("speak to human") ||
+            message.toLowerCase().includes("talk to a person");
 
-        if (needsEscalation) {
-          triggerEscalation(sessionId, chatbotId, message);
+          if (needsEscalation) {
+            triggerEscalation(sessionId, chatbotId, message);
+          }
+
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({ done: true, sessionId })}\n\n`
+            )
+          );
+        } catch (dbErr) {
+          console.error("Error saving message or sentiment:", dbErr);
         }
-
-        controller.enqueue(
-          encoder.encode(
-            `data: ${JSON.stringify({ done: true, sessionId })}\n\n`
-          )
-        );
-      } catch (error) {
+      } else {
         controller.enqueue(
           encoder.encode(
             `data: ${JSON.stringify({
@@ -127,9 +148,9 @@ STRICT RULES:
             })}\n\n`
           )
         );
-      } finally {
-        controller.close();
       }
+
+      controller.close();
     },
   });
 }

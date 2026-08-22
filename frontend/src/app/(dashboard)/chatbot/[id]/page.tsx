@@ -40,7 +40,10 @@ export default async function ChatbotDetailPage({ params }: Props) {
         </Link>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm bg-black shadow-sm">
+            <div 
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm"
+              style={{ backgroundColor: chatbot.primaryColor || "#0f172a" }}
+            >
               {chatbot.name.charAt(0).toUpperCase()}
             </div>
             <h1 className="text-2xl font-bold">{chatbot.name}</h1>

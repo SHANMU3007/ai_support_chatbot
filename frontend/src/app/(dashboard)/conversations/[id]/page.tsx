@@ -57,11 +57,12 @@ export default async function ConversationDetailPage({ params }: Props) {
             className={`flex ${msg.role === "USER" ? "justify-end" : "justify-start"}`}
           >
             <div
-              className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm ${
+              className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
                 msg.role === "USER"
-                  ? "bg-gray-100 text-gray-900"
-                  : "bg-black text-white"
+                  ? "text-white rounded-br-xs shadow-sm"
+                  : "bg-gray-100 text-gray-900 border border-gray-200 rounded-bl-xs"
               }`}
+              style={msg.role === "USER" ? { backgroundColor: chatSession.chatbot.primaryColor || "#0f172a" } : undefined}
             >
               <p>{msg.content}</p>
               <div className="flex items-center gap-2 mt-1 opacity-60 text-xs">

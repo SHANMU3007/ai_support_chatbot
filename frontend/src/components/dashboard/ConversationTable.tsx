@@ -48,6 +48,9 @@ export function ConversationTable({ sessions }: Props) {
           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
             Started
           </th>
+          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            Started
+          </th>
         </tr>
       </thead>
       <tbody className="divide-y">
@@ -58,7 +61,10 @@ export function ConversationTable({ sessions }: Props) {
                 href={`/conversations/${session.id}`}
                 className="flex items-center gap-2 text-sm font-medium text-black hover:underline"
               >
-                <div className="w-5 h-5 rounded-full flex-shrink-0 bg-black" />
+                <div 
+                  className="w-5 h-5 rounded-md flex-shrink-0 shadow-2xs"
+                  style={{ backgroundColor: session.chatbot.primaryColor || "#0f172a" }}
+                />
                 {session.chatbot.name}
               </Link>
             </td>

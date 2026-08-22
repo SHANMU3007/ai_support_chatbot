@@ -9,11 +9,11 @@ import {
   BarChart3,
   Zap,
   Settings,
-  Blocks,
-  Users,
-  AlertCircle,
+  Shield,
   Activity,
-  Shield
+  AlertCircle,
+  Users,
+  Sparkles
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -37,26 +37,36 @@ export function Sidebar({ role }: { role?: "ADMIN" | "WORKSPACE" }) {
   const pathname = usePathname();
 
   return (
-    <div className="w-60 bg-black flex flex-col border-r border-gray-800">
+    <div className="w-64 bg-slate-950 flex flex-col border-r border-slate-800/80 shadow-xl select-none">
       {/* Logo */}
-      <div className="h-16 flex items-center px-5 border-b border-gray-800">
-        <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center mr-3 shadow-sm">
-          <Blocks className="h-4 w-4 text-black" />
-        </div>
-        <div>
-          <span className="font-bold text-white text-sm">SupportIQ</span>
-          <p className="text-[10px] text-gray-400 leading-none mt-0.5">Enterprise Platform</p>
-        </div>
+      <div className="h-16 flex items-center px-6 border-b border-slate-800/80">
+        <Link href="/dashboard" className="flex items-center gap-3 group">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center text-white shadow-md shadow-indigo-600/30 group-hover:scale-105 transition-transform">
+            <Bot className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="font-extrabold text-white text-base tracking-tight">SupportIQ</span>
+              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+                2.0
+              </span>
+            </div>
+            <p className="text-[10px] text-slate-400 font-medium leading-none mt-0.5">Enterprise Platform</p>
+          </div>
+        </Link>
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 px-3 py-5 space-y-6 overflow-y-auto">
+      {/* Navigation */}
+      <nav className="flex-1 px-3 py-6 space-y-6 overflow-y-auto">
         {/* Admin Navigation Section */}
         {role === "ADMIN" && (
-          <div className="space-y-1">
-            <p className="px-3 text-[10px] uppercase font-bold tracking-widest text-purple-400 mb-2">
-              Platform Admin
-            </p>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between px-3 mb-2">
+              <p className="text-[10px] uppercase font-bold tracking-wider text-purple-400">
+                Platform Admin
+              </p>
+              <Sparkles className="h-3 w-3 text-purple-400" />
+            </div>
             {adminNavItems.map(({ href, label, icon: Icon }) => {
               const active = pathname === href || (href !== "/admin" && pathname.startsWith(href));
               return (
@@ -64,13 +74,13 @@ export function Sidebar({ role }: { role?: "ADMIN" | "WORKSPACE" }) {
                   key={href}
                   href={href}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200",
+                    "flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200",
                     active
-                      ? "bg-purple-600 text-white font-semibold shadow-sm"
-                      : "text-gray-400 hover:bg-gray-800 hover:text-white"
+                      ? "bg-purple-600/20 text-purple-300 border border-purple-500/40 shadow-sm shadow-purple-600/20"
+                      : "text-slate-400 hover:bg-slate-900 hover:text-slate-100"
                   )}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className={cn("h-4 w-4", active ? "text-purple-400" : "text-slate-500")} />
                   {label}
                 </Link>
               );
@@ -79,8 +89,8 @@ export function Sidebar({ role }: { role?: "ADMIN" | "WORKSPACE" }) {
         )}
 
         {/* Workspace Tools Section */}
-        <div className="space-y-1">
-          <p className="px-3 text-[10px] uppercase font-bold tracking-widest text-gray-400 mb-2">
+        <div className="space-y-1.5">
+          <p className="px-3 text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-2">
             Workspace Tools
           </p>
           {workspaceNavItems.map(({ href, label, icon: Icon }) => {
@@ -90,16 +100,16 @@ export function Sidebar({ role }: { role?: "ADMIN" | "WORKSPACE" }) {
                 key={href}
                 href={href}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200",
+                  "flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200",
                   active
-                    ? "bg-white text-black font-medium shadow-sm"
-                    : "text-gray-400 hover:bg-gray-800 hover:text-white"
+                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+                    : "text-slate-400 hover:bg-slate-900 hover:text-slate-100"
                 )}
               >
                 <Icon
                   className={cn(
                     "h-4 w-4 transition-colors",
-                    active ? "text-black" : "text-gray-500"
+                    active ? "text-white" : "text-slate-500"
                   )}
                 />
                 {label}
@@ -109,14 +119,17 @@ export function Sidebar({ role }: { role?: "ADMIN" | "WORKSPACE" }) {
         </div>
       </nav>
 
-      {/* Footer */}
-      <div className="px-4 py-4 border-t border-gray-800">
-        <div className="bg-gray-900 rounded-xl px-3 py-3 border border-gray-800">
-          <p className="text-xs text-white font-medium">SupportIQ Core</p>
-          <p className="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-            System Healthy
-          </p>
+      {/* Footer System Status Card */}
+      <div className="p-4 border-t border-slate-800/80">
+        <div className="bg-slate-900/90 rounded-2xl p-3 border border-slate-800 backdrop-blur-sm">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-white font-semibold">Engine Status</p>
+            <span className="flex h-2 w-2 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+            </span>
+          </div>
+          <p className="text-[10px] text-slate-400 mt-1 font-medium">Groq + Qdrant • Operational</p>
         </div>
       </div>
     </div>

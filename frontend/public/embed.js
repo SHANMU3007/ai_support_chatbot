@@ -36,7 +36,16 @@
     return;
   }
 
-  var primaryColor = "#000000";
+  var primaryColor = "#0f172a";
+  if (document.currentScript && document.currentScript.getAttribute("data-color")) {
+    primaryColor = document.currentScript.getAttribute("data-color");
+  } else {
+    var colorScript = document.querySelector("script[data-color]");
+    if (colorScript) primaryColor = colorScript.getAttribute("data-color") || primaryColor;
+  }
+  if (window.ChatBotAIConfig && window.ChatBotAIConfig.primaryColor) {
+    primaryColor = window.ChatBotAIConfig.primaryColor;
+  }
 
   var buttonSize = 56;
   var isOpen = false;
@@ -53,15 +62,15 @@
     "width:" + buttonSize + "px",
     "height:" + buttonSize + "px",
     "border-radius:50%",
-    "background:#000000",
+    "background:" + primaryColor,
     "border:none",
     "cursor:pointer",
-    "box-shadow:0 4px 14px rgba(0,0,0,0.25)",
+    "box-shadow:0 4px 16px rgba(0,0,0,0.25)",
     "display:flex",
     "align-items:center",
     "justify-content:center",
     "z-index:2147483646",
-    "transition:transform 0.2s",
+    "transition:transform 0.2s, box-shadow 0.2s",
   ].join(";");
 
   btn.innerHTML =
