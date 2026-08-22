@@ -103,6 +103,8 @@ export async function GET(req: NextRequest) {
         subject: true,
         description: true,
         status: true,
+        clientFeedback: true,
+        escalatedToAdmin: true,
         adminResponse: true,
         resolvedAt: true,
         createdAt: true,

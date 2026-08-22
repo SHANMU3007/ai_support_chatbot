@@ -26,7 +26,9 @@ export interface TicketItem {
   category: string;
   subject: string;
   description: string;
-  status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+  status: "OPEN" | "REVIEWED_BY_CLIENT" | "ESCALATED_TO_ADMIN" | "IN_PROGRESS" | "RECTIFIED" | "RESOLVED" | "CLOSED";
+  clientFeedback?: string | null;
+  escalatedToAdmin?: boolean;
   adminResponse?: string | null;
   resolvedAt?: string | null;
   createdAt: string;
@@ -349,16 +351,21 @@ export function FeedbackModal({
                 ) : (
                   <div className="space-y-2.5">
                     {tickets.map((t) => {
+                      const isRectified = t.status === "RECTIFIED";
                       const isResolved = t.status === "RESOLVED" || t.status === "CLOSED";
+                      const isEscalated = t.status === "ESCALATED_TO_ADMIN";
+                      const isClientReviewed = t.status === "REVIEWED_BY_CLIENT";
                       const isInProgress = t.status === "IN_PROGRESS";
 
                       return (
                         <div
                           key={t.id}
                           className={`p-3.5 rounded-2xl border transition-all space-y-2.5 ${
-                            isResolved
+                            isRectified || isResolved
                               ? "bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/60"
-                              : isInProgress
+                              : isEscalated
+                              ? "bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800/60"
+                              : isInProgress || isClientReviewed
                               ? "bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800/60"
                               : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
                           }`}
@@ -369,27 +376,39 @@ export function FeedbackModal({
                             </span>
                             <span
                               className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 flex items-center gap-1 ${
-                                isResolved
+                                isRectified || isResolved
                                   ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700"
-                                  : isInProgress
+                                  : isEscalated
+                                  ? "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/60 dark:text-indigo-300 border border-indigo-200"
+                                  : isClientReviewed || isInProgress
                                   ? "bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300"
                                   : "bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300"
                               }`}
                             >
-                              {isResolved ? (
+                              {isRectified || isResolved ? (
                                 <>
                                   <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-                                  <span>Rectified &amp; Resolved</span>
+                                  <span>Rectified &amp; Fixed</span>
+                                </>
+                              ) : isEscalated ? (
+                                <>
+                                  <Sparkles className="h-3 w-3 text-indigo-600" />
+                                  <span>Escalated to Engineering</span>
+                                </>
+                              ) : isClientReviewed ? (
+                                <>
+                                  <Clock className="h-3 w-3 text-blue-600" />
+                                  <span>Reviewed by Support</span>
                                 </>
                               ) : isInProgress ? (
                                 <>
                                   <Clock className="h-3 w-3 text-blue-600" />
-                                  <span>Under Review</span>
+                                  <span>Investigating</span>
                                 </>
                               ) : (
                                 <>
                                   <Clock className="h-3 w-3 text-amber-600" />
-                                  <span>Open</span>
+                                  <span>Sent to Support</span>
                                 </>
                               )}
                             </span>
@@ -399,19 +418,19 @@ export function FeedbackModal({
                             {t.description}
                           </p>
 
-                          {/* Admin Resolution Section */}
+                          {/* Admin / Client Resolution Section */}
                           {t.adminResponse && (
                             <div className="p-2.5 rounded-xl bg-white dark:bg-slate-950 border border-emerald-200 dark:border-emerald-900/80 space-y-1">
                               <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-bold text-[10px]">
                                 <Sparkles className="h-3 w-3" />
-                                <span>Admin Resolution &amp; Fix:</span>
+                                <span>Support &amp; Admin Rectification Note:</span>
                               </div>
                               <p className="text-[11px] text-slate-700 dark:text-slate-300 font-medium">
                                 {t.adminResponse}
                               </p>
                               {t.resolvedAt && (
                                 <p className="text-[9px] text-slate-400">
-                                  Resolved on {new Date(t.resolvedAt).toLocaleDateString()}
+                                  Rectified on {new Date(t.resolvedAt).toLocaleDateString()}
                                 </p>
                               )}
                             </div>

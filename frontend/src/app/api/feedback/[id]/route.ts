@@ -18,11 +18,16 @@ export async function PATCH(req: NextRequest, { params }: Props) {
     }
 
     const userId = (session.user as any).id as string;
+    const userEmail = session.user.email?.toLowerCase();
     const userRole = (session.user as any).role;
-    const isAdmin = userRole === "ADMIN";
+    const adminEmails = (process.env.ADMIN_EMAILS || "shanmugapatelkani@gmail.com")
+      .split(",")
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean);
+    const isAdmin = userRole === "ADMIN" || (userEmail && adminEmails.includes(userEmail));
 
     const body = await req.json();
-    const { status, adminResponse } = body;
+    const { status, clientFeedback, adminResponse, escalatedToAdmin } = body;
 
     // Verify ownership or platform admin
     const ticket = await prisma.feedbackTicket.findUnique({
@@ -34,20 +39,38 @@ export async function PATCH(req: NextRequest, { params }: Props) {
       return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
     }
 
-    if (!isAdmin && ticket.chatbot.userId !== userId) {
+    const isOwner = ticket.chatbot.userId === userId;
+    if (!isAdmin && !isOwner) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const isMarkingResolved = status === "RESOLVED" || status === "CLOSED";
+    const isMarkingResolved = status === "RESOLVED" || status === "RECTIFIED" || status === "CLOSED";
+
+    const updateData: any = {};
+    if (status) updateData.status = status;
+    if (clientFeedback !== undefined) {
+      updateData.clientFeedback = clientFeedback;
+      updateData.clientReviewedAt = new Date();
+    }
+    if (escalatedToAdmin !== undefined) {
+      updateData.escalatedToAdmin = Boolean(escalatedToAdmin);
+      if (escalatedToAdmin && (!status || status === "OPEN")) {
+        updateData.status = "ESCALATED_TO_ADMIN";
+      }
+    }
+    if (adminResponse !== undefined) {
+      updateData.adminResponse = adminResponse;
+    }
+    if (isMarkingResolved && !ticket.resolvedAt) {
+      updateData.resolvedAt = new Date();
+    }
+    if (status === "OPEN") {
+      updateData.resolvedAt = null;
+    }
 
     const updated = await prisma.feedbackTicket.update({
       where: { id: params.id },
-      data: {
-        ...(status ? { status } : {}),
-        ...(adminResponse !== undefined ? { adminResponse } : {}),
-        ...(isMarkingResolved && !ticket.resolvedAt ? { resolvedAt: new Date() } : {}),
-        ...(status === "OPEN" ? { resolvedAt: null } : {}),
-      },
+      data: updateData,
     });
 
     return NextResponse.json({ success: true, ticket: updated });
