@@ -9,6 +9,7 @@ import { ShinyButton } from "@/components/ui/ShinyButton";
 import { AnimatedBackground } from "@/components/ui/AnimatedBackground";
 import { BadgePill } from "@/components/ui/BadgePill";
 import { SplitText } from "@/components/ui/SplitText";
+import { DepthText } from "@/components/ui/DepthText";
 import {
   MessageSquare,
   Zap,
@@ -112,11 +113,29 @@ export default function LandingPage() {
             </BadgePill>
           </div>
 
-          <div className="mb-6">
-            <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold text-slate-950 tracking-tight leading-[1.1]">
+          <div className="mb-8 flex flex-col items-center justify-center">
+            <div className="my-2 select-none">
+              <DepthText
+                text="CONCIERGO"
+                layers={32}
+                depth={2.2}
+                faceColor="#0f172a"
+                depthColor="#6366f1"
+                tilt={8.5}
+                pointerTracking={true}
+                smoothing={0.14}
+                perspective={900}
+                autoOrbit={true}
+                orbitSpeed={0.35}
+                fontSize="clamp(2.75rem, 8.5vw, 5.75rem)"
+                fontWeight={900}
+                shadow={true}
+              />
+            </div>
+            <h1 className="mt-2 text-3xl sm:text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight leading-[1.2]">
               <SplitText
                 text="Turn Your Knowledge into a 24/7 AI Support Concierge."
-                className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight leading-[1.1]"
+                className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-[1.2]"
                 delay={28}
               />
             </h1>
