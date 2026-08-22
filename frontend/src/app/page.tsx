@@ -9,7 +9,7 @@ import { ShinyButton } from "@/components/ui/ShinyButton";
 import { AnimatedBackground } from "@/components/ui/AnimatedBackground";
 import { BadgePill } from "@/components/ui/BadgePill";
 import { SplitText } from "@/components/ui/SplitText";
-import DepthText from "@/components/DepthText/DepthText";
+import ParticleText from "@/components/ParticleText/ParticleText";
 import {
   MessageSquare,
   Zap,
@@ -114,25 +114,27 @@ export default function LandingPage() {
           </div>
 
           <div className="mb-8 flex flex-col items-center justify-center text-center">
-            <div className="my-3 py-2 flex items-center justify-center select-none overflow-visible">
-              <DepthText
+            <div className="w-full max-w-xl mx-auto h-[130px] sm:h-[160px] md:h-[190px] flex items-center justify-center select-none">
+              <ParticleText
                 text="CONCIERGO"
-                layers={34}
-                depth={2.4}
-                faceColor="#0f172a"
-                depthColor="#6366f1"
-                tilt={8.5}
-                pointerTracking={true}
-                smoothing={0.14}
-                perspective={900}
-                autoOrbit={true}
-                orbitSpeed={0.35}
-                fontSize="clamp(3rem, 9.5vw, 6.25rem)"
+                particleSize={2.4}
+                density={3.5}
+                color="#0f172a"
+                highlightColor="#6366f1"
+                scatter={140}
+                gatherDuration={1500}
+                stagger={350}
+                pointerRepel={45}
+                repelRadius={110}
+                idleDrift={0.6}
+                trigger="hover"
+                fontSize="clamp(2.75rem, 8.5vw, 5.5rem)"
                 fontWeight={900}
-                shadow={true}
+                glow={true}
+                className="h-full w-full"
               />
             </div>
-            <h1 className="mt-3 text-3xl sm:text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight leading-[1.2]">
+            <h1 className="mt-2 text-3xl sm:text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight leading-[1.2]">
               <SplitText
                 text="Turn Your Knowledge into a 24/7 AI Support Concierge."
                 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-[1.2]"
