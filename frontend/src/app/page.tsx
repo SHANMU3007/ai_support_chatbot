@@ -41,20 +41,20 @@ export default function LandingPage() {
   return (
     <div className="relative min-h-screen bg-slate-50/50 text-slate-900 selection:bg-indigo-500 selection:text-white overflow-hidden">
       {/* 3D Antigravity Particle Field in Ambient Background */}
-      <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
         <Antigravity
-          count={200}
-          particleSize={0.75}
-          color="#4f46e5"
+          count={220}
+          particleSize={1}
+          color="#6366f1"
           particleShape="sphere"
-          waveSpeed={0.6}
-          waveAmplitude={0.7}
-          lerpSpeed={0.16}
+          waveSpeed={0.8}
+          waveAmplitude={0.8}
+          lerpSpeed={0.18}
           magnetRadius={10}
-          ringRadius={5}
+          ringRadius={4.5}
           autoAnimate={true}
           fieldStrength={10}
-          opacity={0.75}
+          opacity={0.85}
         />
       </div>
 
@@ -123,7 +123,7 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative pt-20 pb-28 px-4 max-w-7xl mx-auto">
+      <section className="relative z-10 pt-20 pb-28 px-4 max-w-7xl mx-auto">
         <div className="text-center max-w-3xl mx-auto mb-16">
           <div className="flex justify-center mb-6">
             <BadgePill variant="gradient">
@@ -272,7 +272,7 @@ export default function LandingPage() {
       </section>
 
       {/* Stats Bar */}
-      <section className="py-12 border-y border-slate-200/80 bg-white/60 backdrop-blur-md">
+      <section className="relative z-10 py-12 border-y border-slate-200/80 bg-white/60 backdrop-blur-md">
         <div className="container mx-auto px-6 max-w-7xl">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             <div>
@@ -296,7 +296,7 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-24 px-4 max-w-7xl mx-auto">
+      <section id="features" className="relative z-10 py-24 px-4 max-w-7xl mx-auto">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <BadgePill variant="indigo" className="mb-4">
             <span>Core Capabilities</span>
@@ -376,7 +376,7 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-24 px-4 bg-gradient-to-b from-transparent via-slate-100/50 to-transparent">
+      <section id="pricing" className="relative z-10 py-24 px-4 bg-gradient-to-b from-transparent via-slate-100/50 to-transparent">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center max-w-2xl mx-auto mb-16">
             <BadgePill variant="neutral" className="mb-4">
@@ -522,7 +522,7 @@ export default function LandingPage() {
       </section>
 
       {/* FAQ Section */}
-      <section id="faq" className="py-24 px-4 max-w-4xl mx-auto">
+      <section id="faq" className="relative z-10 py-24 px-4 max-w-4xl mx-auto">
         <div className="text-center mb-16">
           <BadgePill variant="neutral" className="mb-3">
             <span>Got Questions?</span>
@@ -577,10 +577,10 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Footer Banner */}
-      <section className="py-20 px-4 max-w-6xl mx-auto mb-12">
+      <section className="relative z-10 py-20 px-4 max-w-6xl mx-auto mb-12">
         <div className="relative rounded-3xl bg-slate-950 text-white p-10 md:p-16 overflow-hidden shadow-2xl border border-slate-800">
           <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/30 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-600/30 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-slate-800/40 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative z-10 text-center max-w-2xl mx-auto space-y-6">
             <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight">
@@ -602,7 +602,7 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white/70 backdrop-blur-md py-12 px-6">
+      <footer className="relative z-10 border-t border-slate-200 bg-white/70 backdrop-blur-md py-12 px-6">
         <div className="container mx-auto max-w-7xl flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-slate-950 flex items-center justify-center shadow-xs">

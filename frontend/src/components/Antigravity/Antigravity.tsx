@@ -25,22 +25,22 @@ export interface AntigravityProps {
 }
 
 const AntigravityInner: React.FC<AntigravityProps> = ({
-  count = 200,
+  count = 220,
   magnetRadius = 10,
-  ringRadius = 5,
-  waveSpeed = 0.6,
-  waveAmplitude = 0.7,
-  particleSize = 0.75,
-  lerpSpeed = 0.16,
-  color = '#4f46e5',
+  ringRadius = 4.5,
+  waveSpeed = 0.8,
+  waveAmplitude = 0.8,
+  particleSize = 1,
+  lerpSpeed = 0.18,
+  color = '#6366f1',
   autoAnimate = true,
   particleVariance = 0.5,
   rotationSpeed = 0.2,
-  depthFactor = 0.2,
+  depthFactor = 0.3,
   pulseSpeed = 2.5,
   particleShape = 'sphere',
   fieldStrength = 10,
-  opacity = 0.75
+  opacity = 0.85
 }) => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const { viewport } = useThree();
@@ -64,16 +64,16 @@ const AntigravityInner: React.FC<AntigravityProps> = ({
 
   const particles = useMemo(() => {
     const temp = [];
-    const width = viewport.width || 60;
-    const height = viewport.height || 45;
+    const width = viewport.width || 50;
+    const height = viewport.height || 38;
 
     for (let i = 0; i < count; i++) {
       const t = Math.random() * 100;
       const speed = 0.012 + Math.random() * 0.016;
 
-      const x = (Math.random() - 0.5) * (width * 1.15);
-      const y = (Math.random() - 0.5) * (height * 1.15);
-      const z = (Math.random() - 0.5) * 2; // Flat recessed z-plane to stay behind UI
+      const x = (Math.random() - 0.5) * (width * 1.2);
+      const y = (Math.random() - 0.5) * (height * 1.2);
+      const z = (Math.random() - 0.5) * 2;
 
       const randomRadiusOffset = (Math.random() - 0.5) * 1.2;
 
@@ -142,7 +142,7 @@ const AntigravityInner: React.FC<AntigravityProps> = ({
         targetPosZ = p.mz * depthFactor + Math.sin(p.t) * (0.3 * waveAmplitude);
 
         const distFromRing = Math.abs(dist - ringRadius);
-        scaleMultiplier = Math.max(0.7, 1.15 - distFromRing / 6);
+        scaleMultiplier = Math.max(0.75, 1.2 - distFromRing / 6);
       }
 
       p.cx += (targetPosX - p.cx) * lerpSpeed;
@@ -164,11 +164,11 @@ const AntigravityInner: React.FC<AntigravityProps> = ({
 
   return (
     <instancedMesh ref={meshRef} args={[undefined, undefined, count]}>
-      {particleShape === 'capsule' && <capsuleGeometry args={[0.03, 0.12, 4, 6]} />}
-      {particleShape === 'sphere' && <sphereGeometry args={[0.042, 8, 8]} />}
-      {particleShape === 'box' && <boxGeometry args={[0.06, 0.06, 0.06]} />}
-      {particleShape === 'tetrahedron' && <tetrahedronGeometry args={[0.08]} />}
-      <meshBasicMaterial color={color} transparent opacity={opacity} depthWrite={false} />
+      {particleShape === 'capsule' && <capsuleGeometry args={[0.04, 0.14, 4, 6]} />}
+      {particleShape === 'sphere' && <sphereGeometry args={[0.085, 10, 10]} />}
+      {particleShape === 'box' && <boxGeometry args={[0.08, 0.08, 0.08]} />}
+      {particleShape === 'tetrahedron' && <tetrahedronGeometry args={[0.1]} />}
+      <meshBasicMaterial color={color} transparent opacity={opacity} />
     </instancedMesh>
   );
 };
@@ -177,7 +177,7 @@ export const Antigravity: React.FC<AntigravityProps> = props => {
   return (
     <div className={`w-full h-full pointer-events-none ${props.className || ''}`}>
       <Canvas
-        camera={{ position: [0, 0, 38], fov: 35 }}
+        camera={{ position: [0, 0, 30], fov: 35 }}
         dpr={[1, 1.5]}
         gl={{ powerPreference: 'high-performance', antialias: false, alpha: true }}
       >
