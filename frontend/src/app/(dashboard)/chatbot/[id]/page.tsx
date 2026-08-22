@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,8 +15,14 @@ interface Props {
 
 export default async function ChatbotDetailPage({ params }: Props) {
   const session = await getServerSession(authOptions);
-  const isAdmin = session?.user?.role === "ADMIN";
-  const userId = session!.user!.id as string;
+  if (!session || !session.user) {
+    redirect("/login");
+  }
+  const isAdmin = (session.user as any).role === "ADMIN";
+  const userId = (session.user as any).id as string;
+  if (!userId) {
+    redirect("/login");
+  }
 
   const chatbot = await prisma.chatbot.findFirst({
     where: isAdmin ? { id: params.id } : { id: params.id, userId },

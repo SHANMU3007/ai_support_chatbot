@@ -4,103 +4,133 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
-import { MessageSquare, Bot, FileText, TrendingUp } from "lucide-react";
+import { MessageSquare, Bot, FileText, TrendingUp, Sparkles, Plus } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
+  if (!session || !session.user) {
+    redirect("/login");
+  }
 
-  if (session?.user?.role === "ADMIN") {
+  if ((session.user as any).role === "ADMIN") {
     redirect("/admin");
   }
 
-  const userId = session!.user!.id as string;
+  const userId = (session.user as any).id as string;
+  if (!userId) {
+    redirect("/login");
+  }
 
-  const [chatbotCount, totalMessages, totalDocuments, recentSessions, followUpCount] = await Promise.all([
-    prisma.chatbot.count({ where: { userId } }),
-    prisma.message.count({
-      where: { session: { chatbot: { userId } } },
-    }),
-    prisma.document.count({ where: { chatbot: { userId } } }),
-    prisma.chatSession.findMany({
-      where: { chatbot: { userId } },
-      take: 10,
-      orderBy: { createdAt: "desc" },
-      include: {
-        chatbot: { select: { name: true } },
-        messages: { take: 1, orderBy: { createdAt: "desc" } },
-      },
-    }),
-    prisma.chatSession.count({ where: { chatbot: { userId }, needsFollowUp: true } }),
-  ]);
+  let chatbotCount = 0;
+  let totalMessages = 0;
+  let totalDocuments = 0;
+  let recentSessions: any[] = [];
+  let followUpCount = 0;
+
+  try {
+    const [cCount, mCount, dCount, rSessions, fCount] = await Promise.all([
+      prisma.chatbot.count({ where: { userId } }),
+      prisma.message.count({
+        where: { session: { chatbot: { userId } } },
+      }),
+      prisma.document.count({ where: { chatbot: { userId } } }),
+      prisma.chatSession.findMany({
+        where: { chatbot: { userId } },
+        take: 10,
+        orderBy: { createdAt: "desc" },
+        include: {
+          chatbot: { select: { name: true } },
+          messages: { take: 1, orderBy: { createdAt: "desc" } },
+        },
+      }),
+      prisma.chatSession.count({ where: { chatbot: { userId }, needsFollowUp: true } }),
+    ]);
+
+    chatbotCount = cCount;
+    totalMessages = mCount;
+    totalDocuments = dCount;
+    recentSessions = rSessions;
+    followUpCount = fCount;
+  } catch (err) {
+    console.error("Dashboard database query error:", err);
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Welcome back, {session?.user?.name || session?.user?.email}
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              Workspace Overview
+            </h1>
+          </div>
+          <p className="text-slate-500 text-sm mt-1">
+            Welcome back, <span className="font-semibold text-slate-700 dark:text-slate-300">{session?.user?.name || session?.user?.email}</span>
           </p>
         </div>
         <Link href="/chatbot/create">
-          <Button>
-            <Bot className="mr-2 h-4 w-4" />
+          <Button className="rounded-xl bg-slate-900 hover:bg-slate-800 text-white shadow-sm">
+            <Plus className="mr-2 h-4 w-4" />
             New Chatbot
           </Button>
         </Link>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <StatsCard
           title="Total Chatbots"
           value={chatbotCount}
           icon={Bot}
-          description="Active chatbots"
+          description="Active AI assistants"
         />
         <StatsCard
           title="Total Messages"
           value={totalMessages}
           icon={MessageSquare}
-          description="All time"
+          description="Lifetime interactions"
         />
         <StatsCard
           title="Documents"
           value={totalDocuments}
           icon={FileText}
-          description="In knowledge base"
+          description="Knowledge chunks"
         />
         <StatsCard
-          title="This Week"
+          title="Recent Chats"
           value={recentSessions.length}
           icon={TrendingUp}
-          description="New conversations"
+          description="Conversations"
         />
         <Link href="/conversations" className="block">
           <StatsCard
-            title="Follow-up"
+            title="Follow-ups"
             value={followUpCount}
             icon={TrendingUp}
-            description="Unhappy customers"
+            description="Flagged sentiment"
           />
         </Link>
       </div>
 
       {/* Recent activity */}
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2">
         <ActivityFeed sessions={recentSessions} />
 
         {chatbotCount === 0 && (
-          <div className="bg-indigo-50 border-2 border-dashed border-indigo-200 rounded-xl p-8 text-center">
-            <Bot className="h-12 w-12 text-indigo-400 mx-auto mb-4" />
-            <h3 className="font-semibold text-gray-900 mb-2">Create your first chatbot</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Upload your FAQs, docs, or website URL and get an embeddable AI chatbot in minutes.
+          <div className="bg-indigo-50/70 dark:bg-indigo-950/30 border-2 border-dashed border-indigo-200 dark:border-indigo-800/60 rounded-3xl p-8 text-center flex flex-col items-center justify-center">
+            <div className="w-14 h-14 rounded-2xl bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center mb-4 text-indigo-600 dark:text-indigo-400">
+              <Bot className="h-7 w-7" />
+            </div>
+            <h3 className="font-bold text-slate-900 dark:text-white text-lg mb-1">Create your first chatbot</h3>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mb-6 max-w-sm">
+              Upload your company FAQs, docs, or website URL and get an embeddable AI chatbot in minutes.
             </p>
             <Link href="/chatbot/create">
-              <Button>Get Started</Button>
+              <Button className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm">
+                Get Started Free
+              </Button>
             </Link>
           </div>
         )}

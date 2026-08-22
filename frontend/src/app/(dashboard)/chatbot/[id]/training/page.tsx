@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { DocumentUploader } from "@/components/knowledge/DocumentUploader";
 import { FAQEditor } from "@/components/knowledge/FAQEditor";
 import { URLScraper } from "@/components/knowledge/URLScraper";
@@ -17,7 +17,13 @@ interface Props {
 
 export default async function TrainingPage({ params }: Props) {
   const session = await getServerSession(authOptions);
-  const userId = session!.user!.id as string;
+  if (!session || !session.user) {
+    redirect("/login");
+  }
+  const userId = (session.user as any).id as string;
+  if (!userId) {
+    redirect("/login");
+  }
 
   const chatbot = await prisma.chatbot.findFirst({
     where: { id: params.id, userId },

@@ -11,7 +11,12 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const session = await getServerSession(authOptions);
-  if (!session) {
+  if (!session || !session.user) {
+    redirect("/login");
+  }
+
+  const userId = (session.user as any).id;
+  if (!userId) {
     redirect("/login");
   }
 
@@ -21,17 +26,22 @@ export default async function DashboardLayout({
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
 
-  const dbUser = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { role: true, plan: true },
-  });
+  let dbUser = null;
+  try {
+    dbUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true, plan: true },
+    });
+  } catch (err) {
+    console.error("Failed to load user in DashboardLayout:", err);
+  }
 
   const isConfiguredAdmin =
-    session.user.email && adminEmails.includes(session.user.email.toLowerCase());
+    Boolean(session.user.email && adminEmails.includes(session.user.email.toLowerCase()));
 
   const effectiveRole: "ADMIN" | "WORKSPACE" =
     isConfiguredAdmin || dbUser?.role === "ADMIN" ? "ADMIN" : "WORKSPACE";
-  const effectivePlan = dbUser?.plan || session.user.plan || (effectiveRole === "ADMIN" ? "ENTERPRISE" : "FREE");
+  const effectivePlan = dbUser?.plan || (session.user as any).plan || (effectiveRole === "ADMIN" ? "ENTERPRISE" : "FREE");
 
   const effectiveUser = {
     ...session.user,
@@ -40,11 +50,11 @@ export default async function DashboardLayout({
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
       <Sidebar role={effectiveRole} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header user={effectiveUser} />
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-6 bg-slate-50/50 dark:bg-slate-950">{children}</main>
       </div>
     </div>
   );

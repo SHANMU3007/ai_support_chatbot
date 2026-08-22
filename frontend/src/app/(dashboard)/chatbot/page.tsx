@@ -7,9 +7,18 @@ import { Badge } from "@/components/ui/badge";
 import { Bot, Plus, Settings, ExternalLink, MessageSquare, Shield, Sparkles, FileText } from "lucide-react";
 import { SpotlightCard } from "@/components/ui/SpotlightCard";
 
+import { redirect } from "next/navigation";
+
 export default async function ChatbotsPage() {
   const session = await getServerSession(authOptions);
-  const userId = session!.user!.id as string;
+  if (!session || !session.user) {
+    redirect("/login");
+  }
+
+  const userId = (session.user as any).id as string;
+  if (!userId) {
+    redirect("/login");
+  }
 
   // Failsafe DB role resolution for Admin access
   const adminEmails = (process.env.ADMIN_EMAILS || "shanmugapatelkani@gmail.com")
