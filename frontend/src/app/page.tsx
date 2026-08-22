@@ -9,8 +9,7 @@ import { ShinyButton } from "@/components/ui/ShinyButton";
 import { AnimatedBackground } from "@/components/ui/AnimatedBackground";
 import { BadgePill } from "@/components/ui/BadgePill";
 import { SplitText } from "@/components/ui/SplitText";
-import ParticleText from "@/components/ParticleText/ParticleText";
-import Antigravity from "@/components/Antigravity/Antigravity";
+import Orb from "@/components/Orb/Orb";
 import {
   MessageSquare,
   Zap,
@@ -40,21 +39,13 @@ export default function LandingPage() {
 
   return (
     <div className="relative min-h-screen bg-slate-50/50 text-slate-900 selection:bg-indigo-500 selection:text-white overflow-hidden">
-      {/* 3D Antigravity Particle Field in Ambient Background */}
-      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-        <Antigravity
-          count={260}
-          particleSize={0.5}
-          color="#6366f1"
-          particleShape="sphere"
-          waveSpeed={0.8}
-          waveAmplitude={0.8}
-          lerpSpeed={0.18}
-          magnetRadius={10}
-          ringRadius={4.5}
-          autoAnimate={true}
-          fieldStrength={10}
-          opacity={0.85}
+      {/* 3D WebGL Orb in Hero Background */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[500px] sm:w-[650px] sm:h-[650px] md:w-[800px] md:h-[800px] pointer-events-auto z-0 opacity-60 mix-blend-multiply flex items-center justify-center overflow-hidden">
+        <Orb
+          hue={235}
+          hoverIntensity={0.3}
+          rotateOnHover={true}
+          backgroundColor="#f8fafc"
         />
       </div>
 
@@ -133,32 +124,11 @@ export default function LandingPage() {
           </div>
 
           <div className="mb-8 flex flex-col items-center justify-center text-center">
-            <div className="w-full max-w-xl mx-auto h-[130px] sm:h-[160px] md:h-[190px] flex items-center justify-center select-none">
-              <ParticleText
-                text="CONCIERGO"
-                particleSize={2.4}
-                density={3.5}
-                color="#0f172a"
-                highlightColor="#6366f1"
-                scatter={140}
-                gatherDuration={1500}
-                stagger={350}
-                pointerRepel={45}
-                repelRadius={110}
-                idleDrift={0.6}
-                trigger="hover"
-                fontSize="clamp(2.75rem, 8.5vw, 5.5rem)"
-                fontWeight={900}
-                glow={true}
-                className="h-full w-full"
-              />
-            </div>
-            <h1 className="mt-2 text-3xl sm:text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight leading-[1.2]">
-              <SplitText
-                text="Turn Your Knowledge into a 24/7 AI Support Concierge."
-                className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-[1.2]"
-                delay={28}
-              />
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-slate-950 tracking-tight leading-[1.1] mb-6">
+              Turn Your Knowledge into a{" "}
+              <span className="bg-gradient-to-r from-indigo-600 via-slate-800 to-indigo-900 bg-clip-text text-transparent">
+                24/7 AI Support Concierge
+              </span>
             </h1>
           </div>
 
