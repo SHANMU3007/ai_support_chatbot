@@ -25,22 +25,22 @@ export interface AntigravityProps {
 }
 
 const AntigravityInner: React.FC<AntigravityProps> = ({
-  count = 240,
-  magnetRadius = 11,
-  ringRadius = 5.5,
-  waveSpeed = 0.7,
-  waveAmplitude = 0.9,
-  particleSize = 1,
+  count = 200,
+  magnetRadius = 10,
+  ringRadius = 5,
+  waveSpeed = 0.6,
+  waveAmplitude = 0.7,
+  particleSize = 0.75,
   lerpSpeed = 0.16,
   color = '#4f46e5',
   autoAnimate = true,
-  particleVariance = 0.6,
+  particleVariance = 0.5,
   rotationSpeed = 0.2,
-  depthFactor = 0.5,
+  depthFactor = 0.2,
   pulseSpeed = 2.5,
   particleShape = 'sphere',
   fieldStrength = 10,
-  opacity = 0.85
+  opacity = 0.75
 }) => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const { viewport } = useThree();
@@ -69,11 +69,11 @@ const AntigravityInner: React.FC<AntigravityProps> = ({
 
     for (let i = 0; i < count; i++) {
       const t = Math.random() * 100;
-      const speed = 0.012 + Math.random() * 0.018;
+      const speed = 0.012 + Math.random() * 0.016;
 
       const x = (Math.random() - 0.5) * (width * 1.15);
       const y = (Math.random() - 0.5) * (height * 1.15);
-      const z = (Math.random() - 0.5) * 4;
+      const z = (Math.random() - 0.5) * 2; // Flat recessed z-plane to stay behind UI
 
       const randomRadiusOffset = (Math.random() - 0.5) * 1.2;
 
@@ -134,15 +134,15 @@ const AntigravityInner: React.FC<AntigravityProps> = ({
       if (distSq < magnetRadiusSq) {
         const dist = Math.sqrt(distSq);
         const angle = Math.atan2(dy, dx) + globalRotation;
-        const wave = Math.sin(p.t * waveSpeed + angle) * (0.5 * waveAmplitude);
+        const wave = Math.sin(p.t * waveSpeed + angle) * (0.4 * waveAmplitude);
         const currentRingRadius = ringRadius + wave + p.randomRadiusOffset;
 
         targetPosX = targetX + currentRingRadius * Math.cos(angle);
         targetPosY = targetY + currentRingRadius * Math.sin(angle);
-        targetPosZ = p.mz * depthFactor + Math.sin(p.t) * (0.5 * waveAmplitude);
+        targetPosZ = p.mz * depthFactor + Math.sin(p.t) * (0.3 * waveAmplitude);
 
         const distFromRing = Math.abs(dist - ringRadius);
-        scaleMultiplier = Math.max(0.6, 1.25 - distFromRing / 6);
+        scaleMultiplier = Math.max(0.7, 1.15 - distFromRing / 6);
       }
 
       p.cx += (targetPosX - p.cx) * lerpSpeed;
@@ -151,7 +151,7 @@ const AntigravityInner: React.FC<AntigravityProps> = ({
 
       dummy.position.set(p.cx, p.cy, p.cz);
 
-      const pulse = 1 + Math.sin(p.t * pulseSpeed) * 0.15 * particleVariance;
+      const pulse = 1 + Math.sin(p.t * pulseSpeed) * 0.12 * particleVariance;
       const finalScale = scaleMultiplier * pulse * particleSize;
       dummy.scale.set(finalScale, finalScale, finalScale);
       dummy.updateMatrix();
@@ -164,10 +164,10 @@ const AntigravityInner: React.FC<AntigravityProps> = ({
 
   return (
     <instancedMesh ref={meshRef} args={[undefined, undefined, count]}>
-      {particleShape === 'capsule' && <capsuleGeometry args={[0.05, 0.18, 4, 6]} />}
-      {particleShape === 'sphere' && <sphereGeometry args={[0.07, 10, 10]} />}
-      {particleShape === 'box' && <boxGeometry args={[0.1, 0.1, 0.1]} />}
-      {particleShape === 'tetrahedron' && <tetrahedronGeometry args={[0.12]} />}
+      {particleShape === 'capsule' && <capsuleGeometry args={[0.03, 0.12, 4, 6]} />}
+      {particleShape === 'sphere' && <sphereGeometry args={[0.042, 8, 8]} />}
+      {particleShape === 'box' && <boxGeometry args={[0.06, 0.06, 0.06]} />}
+      {particleShape === 'tetrahedron' && <tetrahedronGeometry args={[0.08]} />}
       <meshBasicMaterial color={color} transparent opacity={opacity} depthWrite={false} />
     </instancedMesh>
   );
