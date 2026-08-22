@@ -158,19 +158,18 @@ async def start_bot(
         logger.info("Bot for chatbot %s is already running, restarting...", chatbot_id)
         await stop_bot(chatbot_id)
 
-    # Retry up to 3 times (Telegram API can be slow from certain regions)
-    max_retries = 3
+    # Fast retry attempt with clean error logging
+    max_retries = 2
     for attempt in range(1, max_retries + 1):
         app: Application | None = None
         try:
-            # Increase timeouts to handle slow connections to api.telegram.org
             app = (
                 Application.builder()
                 .token(token)
-                .connect_timeout(30.0)
-                .read_timeout(30.0)
-                .write_timeout(30.0)
-                .pool_timeout(30.0)
+                .connect_timeout(8.0)
+                .read_timeout(10.0)
+                .write_timeout(10.0)
+                .pool_timeout(8.0)
                 .build()
             )
 
@@ -190,7 +189,6 @@ async def start_bot(
             await app.initialize()
             await app.start()
             try:
-                # Crucial: Delete any previously registered webhooks before polling
                 await app.bot.delete_webhook(drop_pending_updates=True)
             except Exception as w_err:
                 logger.warning("Could not delete webhook for chatbot %s: %s", chatbot_id, w_err)
@@ -202,11 +200,7 @@ async def start_bot(
             return True
 
         except Exception as exc:
-            logger.warning(
-                "Attempt %d/%d failed for chatbot %s: %s",
-                attempt, max_retries, chatbot_id, exc,
-            )
-            # Clean up partially initialized Application to prevent resource leaks
+            # Clean up partially initialized Application
             if app is not None:
                 try:
                     await app.shutdown()
@@ -214,11 +208,12 @@ async def start_bot(
                     pass
 
             if attempt < max_retries:
-                await asyncio.sleep(5)  # wait before retrying
+                logger.warning("Telegram connect attempt %d failed for %s: %s — retrying in 2s", attempt, chatbot_id, exc)
+                await asyncio.sleep(2)
             else:
-                logger.exception(
-                    "Failed to start Telegram bot for chatbot %s after %d attempts",
-                    chatbot_id, max_retries,
+                logger.warning(
+                    "Telegram bot for %s could not connect to api.telegram.org (Network/ISP restriction or invalid token). Skipping Telegram polling.",
+                    chatbot_id
                 )
 
     return False
