@@ -39,6 +39,7 @@ export async function PUT(req: NextRequest, { params }: Props) {
       welcomeMessage: body.welcomeMessage,
       language: body.language,
       isActive: body.isActive,
+      ...(body.privacyLevel ? { privacyLevel: body.privacyLevel } : {}),
     },
   });
 

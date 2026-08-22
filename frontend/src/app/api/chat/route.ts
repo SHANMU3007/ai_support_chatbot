@@ -3,13 +3,14 @@ import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import { scoreSessionSentiment } from "@/lib/sentiment";
 import { getFastApiUrl } from "@/lib/api-config";
+import { sanitizePII } from "@/lib/privacy";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { message, sessionId, botId, language = "en" } = body;
+    const { message, sessionId, botId, language = "en", history: clientHistory = [] } = body;
 
     if (!message || !botId) {
       return NextResponse.json(
@@ -30,6 +31,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const privacyLevel = chatbot.privacyLevel || "PII_MASKED";
+    const isZeroRetention = privacyLevel === "ZERO_RETENTION";
+    const isPiiMasked = privacyLevel === "PII_MASKED";
+
     // Get or create session
     let session = sessionId
       ? await prisma.chatSession.findFirst({
@@ -49,29 +54,42 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Save user message
-    await prisma.message.create({
-      data: {
-        sessionId: session.id,
-        role: "USER",
-        content: message,
-      },
-    });
+    // Process user message storage according to Enterprise Privacy Policy
+    if (!isZeroRetention) {
+      const messageToSave = isPiiMasked ? sanitizePII(message) : message;
+      await prisma.message.create({
+        data: {
+          sessionId: session.id,
+          role: "USER",
+          content: messageToSave,
+        },
+      });
+    }
 
     // Get conversation history for backend
-    const history = await prisma.message.findMany({
-      where: { sessionId: session.id },
-      orderBy: { createdAt: "desc" },
-      take: 6,
-    });
+    let historyForBackend: Array<{ role: string; content: string }> = [];
 
-    const historyForBackend = history
-      .reverse()
-      .filter((m) => m.content !== message)
-      .map((m) => ({
-        role: m.role === "USER" ? "user" : "assistant",
-        content: m.content,
+    if (!isZeroRetention) {
+      const history = await prisma.message.findMany({
+        where: { sessionId: session.id },
+        orderBy: { createdAt: "desc" },
+        take: 6,
+      });
+
+      historyForBackend = history
+        .reverse()
+        .filter((m) => m.content !== message)
+        .map((m) => ({
+          role: m.role === "USER" ? "user" : "assistant",
+          content: m.content,
+        }));
+    } else if (Array.isArray(clientHistory) && clientHistory.length > 0) {
+      // In Zero-Retention mode, use client-provided ephemeral in-memory history
+      historyForBackend = clientHistory.slice(-5).map((h: any) => ({
+        role: h.role === "user" || h.role === "USER" ? "user" : "assistant",
+        content: isPiiMasked ? sanitizePII(h.content) : h.content,
       }));
+    }
 
     // Forward to FastAPI RAG backend and stream back
     const backendUrl = getFastApiUrl("/chat/message");
@@ -114,6 +132,7 @@ export async function POST(req: NextRequest) {
           "Cache-Control": "no-cache",
           Connection: "keep-alive",
           "X-Session-Id": session.id,
+          "X-Privacy-Mode": privacyLevel,
         },
       });
     }
@@ -174,14 +193,15 @@ export async function POST(req: NextRequest) {
         }
       },
       async flush() {
-        // Save the complete assistant response to the database
-        if (fullResponse) {
+        // Only persist assistant response to DB if NOT in Zero-Retention Enterprise Mode
+        if (fullResponse && !isZeroRetention) {
           try {
+            const responseToSave = isPiiMasked ? sanitizePII(fullResponse) : fullResponse;
             await prisma.message.create({
               data: {
                 sessionId: sessionIdForHeader,
                 role: "ASSISTANT",
-                content: fullResponse,
+                content: responseToSave,
               },
             });
             await scoreSessionSentiment(sessionIdForHeader);
@@ -200,6 +220,7 @@ export async function POST(req: NextRequest) {
         "Cache-Control": "no-cache",
         Connection: "keep-alive",
         "X-Session-Id": session.id,
+        "X-Privacy-Mode": privacyLevel,
       },
     });
   } catch (error) {

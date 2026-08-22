@@ -1,7 +1,6 @@
-
 "use client";
 
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef } from "react";
 import { motion, useInView } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -24,11 +23,12 @@ export function SplitText({
   animationFrom = { opacity: 0, y: 30 },
   animationTo = { opacity: 1, y: 0 },
   threshold = 0.1,
+  rootMargin = "-100px",
   textAlign = "center",
   onLetterAnimationComplete,
 }: SplitTextProps) {
   const ref = useRef<HTMLParagraphElement>(null);
-  const inView = useInView(ref, { once: true, amount: threshold });
+  const inView = useInView(ref, { once: true, amount: threshold, margin: rootMargin as any });
 
   // Split into words, then words into characters so words wrap properly on responsive screens
   const words = text.split(" ");
@@ -38,16 +38,13 @@ export function SplitText({
     totalLettersCount += w.length;
   });
 
-  const [completedCount, setCompletedCount] = useState(0);
+  const completedCountRef = useRef(0);
 
   const handleAnimationComplete = () => {
-    setCompletedCount((prev) => {
-      const next = prev + 1;
-      if (next === totalLettersCount && onLetterAnimationComplete) {
-        onLetterAnimationComplete();
-      }
-      return next;
-    });
+    completedCountRef.current += 1;
+    if (completedCountRef.current === totalLettersCount && onLetterAnimationComplete) {
+      onLetterAnimationComplete();
+    }
   };
 
   let globalCharIndex = 0;

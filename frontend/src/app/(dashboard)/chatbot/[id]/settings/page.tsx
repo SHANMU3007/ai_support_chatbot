@@ -24,6 +24,9 @@ import {
   Palette,
   MessageSquare,
   Wand2,
+  ShieldCheck,
+  Lock,
+  EyeOff,
 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
@@ -100,6 +103,7 @@ export default function ChatbotSettingsPage({ params }: Props) {
     welcomeMessage: "",
     language: "en",
     isActive: true,
+    privacyLevel: "PII_MASKED",
   });
 
   useEffect(() => {
@@ -116,6 +120,7 @@ export default function ChatbotSettingsPage({ params }: Props) {
             welcomeMessage: data.welcomeMessage || "Hello! How can I help you today?",
             language: data.language || "en",
             isActive: data.isActive ?? true,
+            privacyLevel: data.privacyLevel || "PII_MASKED",
           });
         }
       })
@@ -465,7 +470,92 @@ export default function ChatbotSettingsPage({ params }: Props) {
             </CardContent>
           </Card>
 
-          {/* 4. Telegram Integration */}
+          {/* 4. Enterprise Chat Privacy & Data Retention */}
+          <Card className="border-gray-200 shadow-xs">
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400">
+                    <ShieldCheck className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Enterprise Chat Privacy &amp; Data Policy</CardTitle>
+                    <CardDescription>Configure data retention and PII sanitization for user conversations</CardDescription>
+                  </div>
+                </div>
+                <Lock className="h-4 w-4 text-gray-400" />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {/* Option 1: PII Masked */}
+              <div
+                onClick={() => update("privacyLevel", "PII_MASKED")}
+                className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex items-start gap-3 ${
+                  form.privacyLevel === "PII_MASKED"
+                    ? "border-indigo-600 bg-indigo-50/50 ring-1 ring-indigo-500/20"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <div className="p-1.5 rounded-lg bg-indigo-100 text-indigo-700 mt-0.5 shrink-0">
+                  <ShieldCheck className="h-4 w-4" />
+                </div>
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-bold text-gray-900">PII-Masked (Enterprise Recommended)</p>
+                    <span className="text-[10px] font-bold bg-indigo-100 text-indigo-800 px-1.5 py-0.2 rounded-sm">Default</span>
+                  </div>
+                  <p className="text-[11px] text-gray-600 leading-relaxed">
+                    Personal Identifiable Information (emails, phone numbers, credit card numbers, passwords, API tokens) is automatically redacted in real-time before saving to logs.
+                  </p>
+                </div>
+              </div>
+
+              {/* Option 2: Zero Retention */}
+              <div
+                onClick={() => update("privacyLevel", "ZERO_RETENTION")}
+                className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex items-start gap-3 ${
+                  form.privacyLevel === "ZERO_RETENTION"
+                    ? "border-purple-600 bg-purple-50/50 ring-1 ring-purple-500/20"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <div className="p-1.5 rounded-lg bg-purple-100 text-purple-700 mt-0.5 shrink-0">
+                  <EyeOff className="h-4 w-4" />
+                </div>
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-bold text-gray-900">Zero-Retention Mode (Strict Zero-Knowledge)</p>
+                    <span className="text-[10px] font-bold bg-purple-100 text-purple-800 px-1.5 py-0.2 rounded-sm">SOC-2 Strict</span>
+                  </div>
+                  <p className="text-[11px] text-gray-600 leading-relaxed">
+                    Zero chat transcripts are persisted in the database. Conversations are processed ephemerally in-memory and streamed directly. Admins cannot view raw user chats.
+                  </p>
+                </div>
+              </div>
+
+              {/* Option 3: Standard */}
+              <div
+                onClick={() => update("privacyLevel", "STANDARD")}
+                className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex items-start gap-3 ${
+                  form.privacyLevel === "STANDARD"
+                    ? "border-slate-800 bg-slate-50 ring-1 ring-slate-400/20"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <div className="p-1.5 rounded-lg bg-gray-100 text-gray-700 mt-0.5 shrink-0">
+                  <MessageSquare className="h-4 w-4" />
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-xs font-bold text-gray-900">Standard Transcript Logging</p>
+                  <p className="text-[11px] text-gray-600 leading-relaxed">
+                    Saves full conversation transcripts for quality assurance, human review, and training data insights.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 5. Telegram Integration */}
           <Card className="border-gray-200 shadow-xs">
             <CardHeader className="pb-4">
               <div className="flex items-center gap-3">

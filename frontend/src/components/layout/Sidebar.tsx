@@ -13,7 +13,8 @@ import {
   Activity,
   AlertCircle,
   Users,
-  Sparkles
+  Sparkles,
+  LifeBuoy
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +22,7 @@ const workspaceNavItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/chatbot", label: "Chatbots", icon: Bot },
   { href: "/conversations", label: "Conversations", icon: MessageSquare },
+  { href: "/feedback", label: "Resolution Center", icon: LifeBuoy },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/integrations", label: "Integrations", icon: Zap },
   { href: "/settings", label: "Settings", icon: Settings },
@@ -28,6 +30,7 @@ const workspaceNavItems = [
 
 const adminNavItems = [
   { href: "/admin", label: "Admin Overview", icon: Shield },
+  { href: "/feedback", label: "Resolution Center", icon: LifeBuoy },
   { href: "/admin/workspaces", label: "Workspaces", icon: Users },
   { href: "/admin/followup", label: "Sentiment Queue", icon: AlertCircle },
   { href: "/admin/health", label: "System Health", icon: Activity },

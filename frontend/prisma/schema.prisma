@@ -80,22 +80,24 @@ model Payment {
 }
 
 model Chatbot {
-  id             String        @id @default(cuid())
+  id             String         @id @default(cuid())
   userId         String
-  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   name           String
   businessName   String
   description    String?
-  systemPrompt   String        @db.Text
-  primaryColor   String        @default("#6366f1")
-  welcomeMessage String        @default("Hi! How can I help you today?")
-  language       String        @default("en")
-  isActive       Boolean       @default(true)
+  systemPrompt   String         @db.Text
+  primaryColor   String         @default("#6366f1")
+  welcomeMessage String         @default("Hi! How can I help you today?")
+  language       String         @default("en")
+  isActive       Boolean        @default(true)
   telegramToken  String?
+  privacyLevel   PrivacyLevel   @default(PII_MASKED)
   documents      Document[]
   sessions       ChatSession[]
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  tickets        FeedbackTicket[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 }
 
 model Document {
@@ -138,6 +140,44 @@ model Message {
   tokens     Int?
   confidence Float?
   createdAt  DateTime    @default(now())
+}
+
+model FeedbackTicket {
+  id              String         @id @default(cuid())
+  chatbotId       String
+  chatbot         Chatbot        @relation(fields: [chatbotId], references: [id], onDelete: Cascade)
+  visitorId       String
+  userEmail       String?
+  category        TicketCategory @default(GENERAL_FEEDBACK)
+  subject         String
+  description     String         @db.Text
+  attachedContext String?        @db.Text
+  status          TicketStatus   @default(OPEN)
+  adminResponse   String?        @db.Text
+  resolvedAt      DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+enum PrivacyLevel {
+  STANDARD
+  PII_MASKED
+  ZERO_RETENTION
+}
+
+enum TicketCategory {
+  INACCURATE_ANSWER
+  BUG_REPORT
+  COMPLAINT
+  FEATURE_REQUEST
+  GENERAL_FEEDBACK
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
 }
 
 enum Plan {

@@ -29,6 +29,8 @@ htmlcov/
 .coverage.*
 coverage.xml
 *.cover
+*.png.tmp
+playwright_test.png
 
 # ──────────────────────────────────────────────
 # Node / Frontend / Embed

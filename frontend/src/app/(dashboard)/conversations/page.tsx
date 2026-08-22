@@ -41,6 +41,7 @@ export default async function ConversationsPage() {
         select: {
           name: true,
           primaryColor: true,
+          privacyLevel: true,
           user: { select: { email: true } },
         },
       },

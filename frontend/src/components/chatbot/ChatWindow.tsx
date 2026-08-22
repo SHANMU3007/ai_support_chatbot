@@ -5,9 +5,10 @@ import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import { ChatInput } from "./ChatInput";
 import { MessageBubble } from "./MessageBubble";
 import { TypingIndicator } from "./TypingIndicator";
-import { useEffect, useRef } from "react";
+import { FeedbackModal, TicketItem } from "./FeedbackModal";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bot, RotateCcw, Sparkles, Zap } from "lucide-react";
+import { Bot, RotateCcw, Sparkles, Zap, LifeBuoy, CheckCircle2 } from "lucide-react";
 
 interface ChatWindowProps {
   chatbotId: string;
@@ -26,11 +27,13 @@ export function ChatWindow({
   primaryColor,
   language,
 }: ChatWindowProps) {
-  const { messages, isLoading, sendMessage, clearChat } = useChat({
+  const { messages, isLoading, sendMessage, clearChat, visitorId } = useChat({
     botId: chatbotId,
     language,
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [resolvedTicketsCount, setResolvedTicketsCount] = useState(0);
 
   // Text-to-Speech hook
   const {
@@ -45,10 +48,29 @@ export function ChatWindow({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
+  // Initial check for visitor's resolved tickets to show notification badge
+  useEffect(() => {
+    if (!chatbotId || !visitorId) return;
+    fetch(`/api/feedback?botId=${chatbotId}&visitorId=${visitorId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.tickets) {
+          const resolved = data.tickets.filter((t: TicketItem) => t.status === "RESOLVED");
+          setResolvedTicketsCount(resolved.length);
+        }
+      })
+      .catch(() => {});
+  }, [chatbotId, visitorId]);
+
   // Stop TTS when chat is cleared
   const handleClearChat = () => {
     stopSpeaking();
     clearChat();
+  };
+
+  const handleTicketsUpdated = (tickets: TicketItem[]) => {
+    const resolved = tickets.filter((t) => t.status === "RESOLVED");
+    setResolvedTicketsCount(resolved.length);
   };
 
   // Show typing indicator when assistant message is empty and loading
@@ -64,7 +86,7 @@ export function ChatWindow({
   ];
 
   return (
-    <div className="flex flex-col h-full rounded-none sm:rounded-3xl shadow-2xl overflow-hidden border border-slate-200/80 sm:border-slate-700/60 bg-white dark:bg-slate-900 transition-all">
+    <div className="flex flex-col h-full rounded-none sm:rounded-3xl shadow-2xl overflow-hidden border border-slate-200/80 sm:border-slate-700/60 bg-white dark:bg-slate-900 transition-all relative">
       {/* Header */}
       <div
         className="px-5 py-4 text-white flex items-center justify-between relative shadow-md transition-colors duration-300 z-10"
@@ -85,11 +107,23 @@ export function ChatWindow({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <div className="hidden xs:flex items-center gap-1.5 bg-black/20 px-2.5 py-1 rounded-full backdrop-blur-xs text-[11px] font-medium border border-white/10">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Active</span>
-          </div>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {/* Feedback & Complaint Button */}
+          <motion.button
+            whileTap={{ scale: 0.92 }}
+            onClick={() => setIsFeedbackOpen(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 transition-all text-white border border-white/10 text-xs font-semibold relative shadow-xs"
+            title="Submit feedback or report issue"
+          >
+            <LifeBuoy className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Feedback</span>
+            {resolvedTicketsCount > 0 && (
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+              </span>
+            )}
+          </motion.button>
 
           {messages.length > 0 && (
             <motion.button
@@ -174,6 +208,18 @@ export function ChatWindow({
         disabled={isLoading}
         primaryColor={primaryColor}
         language={language}
+      />
+
+      {/* Feedback & Rectification Modal */}
+      <FeedbackModal
+        isOpen={isFeedbackOpen}
+        onClose={() => setIsFeedbackOpen(false)}
+        chatbotId={chatbotId}
+        chatbotName={chatbotName}
+        primaryColor={primaryColor}
+        visitorId={visitorId}
+        recentMessages={messages.map((m) => ({ role: m.role, content: m.content }))}
+        onTicketsUpdated={handleTicketsUpdated}
       />
     </div>
   );

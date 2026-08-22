@@ -59,6 +59,10 @@ export function useChat({ botId, language = "en" }: UseChatOptions) {
             botId,
             sessionId: sessionId || `${visitorIdRef.current}:${Date.now()}`,
             language,
+            history: messages.slice(-5).map((m) => ({
+              role: m.role,
+              content: m.content,
+            })),
           }),
           signal: abortRef.current.signal,
         });
@@ -169,7 +173,7 @@ export function useChat({ botId, language = "en" }: UseChatOptions) {
         setIsLoading(false);
       }
     },
-    [botId, isLoading, language, sessionId]
+    [botId, isLoading, language, sessionId, messages]
   );
 
   const clearChat = useCallback(() => {
@@ -178,5 +182,5 @@ export function useChat({ botId, language = "en" }: UseChatOptions) {
     abortRef.current?.abort();
   }, []);
 
-  return { messages, isLoading, sendMessage, clearChat, sessionId };
+  return { messages, isLoading, sendMessage, clearChat, sessionId, visitorId: visitorIdRef.current };
 }
