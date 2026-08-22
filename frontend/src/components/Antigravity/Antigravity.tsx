@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import React, { useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 
 export interface AntigravityProps {
@@ -25,46 +25,57 @@ export interface AntigravityProps {
 }
 
 const AntigravityInner: React.FC<AntigravityProps> = ({
-  count = 280,
-  magnetRadius = 14,
-  ringRadius = 6,
-  waveSpeed = 0.6,
-  waveAmplitude = 0.8,
-  particleSize = 0.6,
-  lerpSpeed = 0.18,
-  color = '#6366f1',
+  count = 240,
+  magnetRadius = 11,
+  ringRadius = 5.5,
+  waveSpeed = 0.7,
+  waveAmplitude = 0.9,
+  particleSize = 1,
+  lerpSpeed = 0.16,
+  color = '#4f46e5',
   autoAnimate = true,
-  particleVariance = 0.8,
+  particleVariance = 0.6,
   rotationSpeed = 0.2,
-  depthFactor = 0.6,
-  pulseSpeed = 3,
+  depthFactor = 0.5,
+  pulseSpeed = 2.5,
   particleShape = 'sphere',
   fieldStrength = 10,
-  opacity = 0.75
+  opacity = 0.85
 }) => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const { viewport } = useThree();
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
-  const lastMousePos = useRef({ x: 0, y: 0 });
-  const lastMouseMoveTime = useRef(0);
+  const mouseRef = useRef({ x: 0, y: 0, hasMoved: false });
+  const lastMoveTimeRef = useRef(0);
   const virtualMouse = useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const onPointerMove = (e: PointerEvent) => {
+      mouseRef.current.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouseRef.current.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      mouseRef.current.hasMoved = true;
+      lastMoveTimeRef.current = performance.now();
+    };
+
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
+    return () => window.removeEventListener('pointermove', onPointerMove);
+  }, []);
 
   const particles = useMemo(() => {
     const temp = [];
-    const width = viewport.width || 80;
-    const height = viewport.height || 60;
+    const width = viewport.width || 60;
+    const height = viewport.height || 45;
 
     for (let i = 0; i < count; i++) {
       const t = Math.random() * 100;
-      const speed = 0.015 + Math.random() * 0.02;
+      const speed = 0.012 + Math.random() * 0.018;
 
-      // Keep particles uniformly distributed across the screen without extreme close-up z-depth
-      const x = (Math.random() - 0.5) * (width * 1.1);
-      const y = (Math.random() - 0.5) * (height * 1.1);
-      const z = (Math.random() - 0.5) * 6; // Shallow z-range keeps particle size uniform & tiny
+      const x = (Math.random() - 0.5) * (width * 1.15);
+      const y = (Math.random() - 0.5) * (height * 1.15);
+      const z = (Math.random() - 0.5) * 4;
 
-      const randomRadiusOffset = (Math.random() - 0.5) * 1.5;
+      const randomRadiusOffset = (Math.random() - 0.5) * 1.2;
 
       temp.push({
         t,
@@ -75,8 +86,7 @@ const AntigravityInner: React.FC<AntigravityProps> = ({
         cx: x,
         cy: y,
         cz: z,
-        randomRadiusOffset,
-        depth: 0.5 + Math.random() * 0.5
+        randomRadiusOffset
       });
     }
     return temp;
@@ -86,24 +96,19 @@ const AntigravityInner: React.FC<AntigravityProps> = ({
     const mesh = meshRef.current;
     if (!mesh) return;
 
-    const { viewport: v, pointer: m } = state;
+    const { viewport: v } = state;
 
-    const mouseDist = Math.abs(m.x - lastMousePos.current.x) + Math.abs(m.y - lastMousePos.current.y);
-    if (mouseDist > 0.0005) {
-      lastMouseMoveTime.current = Date.now();
-      lastMousePos.current = { x: m.x, y: m.y };
-    }
+    let destX = (mouseRef.current.x * v.width) / 2;
+    let destY = (mouseRef.current.y * v.height) / 2;
 
-    let destX = (m.x * v.width) / 2;
-    let destY = (m.y * v.height) / 2;
-
-    if (autoAnimate && Date.now() - lastMouseMoveTime.current > 1200) {
+    const isIdle = !mouseRef.current.hasMoved || performance.now() - lastMoveTimeRef.current > 1500;
+    if (autoAnimate && isIdle) {
       const time = state.clock.getElapsedTime();
-      destX = Math.sin(time * 0.6) * (v.width / 4);
-      destY = Math.cos(time * 0.6 * 1.5) * (v.height / 4);
+      destX = Math.sin(time * 0.5) * (v.width / 4);
+      destY = Math.cos(time * 0.5 * 1.4) * (v.height / 4);
     }
 
-    const smoothFactor = Math.min(1, delta * 8);
+    const smoothFactor = Math.min(1, delta * 9);
     virtualMouse.current.x += (destX - virtualMouse.current.x) * smoothFactor;
     virtualMouse.current.y += (destY - virtualMouse.current.y) * smoothFactor;
 
@@ -111,8 +116,7 @@ const AntigravityInner: React.FC<AntigravityProps> = ({
     const targetY = virtualMouse.current.y;
     const time = state.clock.getElapsedTime();
     const globalRotation = time * rotationSpeed;
-
-    const needsRotation = particleShape !== 'sphere';
+    const magnetRadiusSq = magnetRadius * magnetRadius;
 
     for (let i = 0; i < particles.length; i++) {
       const p = particles[i];
@@ -121,12 +125,11 @@ const AntigravityInner: React.FC<AntigravityProps> = ({
       const dx = p.mx - targetX;
       const dy = p.my - targetY;
       const distSq = dx * dx + dy * dy;
-      const magnetRadiusSq = magnetRadius * magnetRadius;
 
       let targetPosX = p.mx;
       let targetPosY = p.my;
       let targetPosZ = p.mz * depthFactor;
-      let scaleFactor = 0.85;
+      let scaleMultiplier = 1;
 
       if (distSq < magnetRadiusSq) {
         const dist = Math.sqrt(distSq);
@@ -136,10 +139,10 @@ const AntigravityInner: React.FC<AntigravityProps> = ({
 
         targetPosX = targetX + currentRingRadius * Math.cos(angle);
         targetPosY = targetY + currentRingRadius * Math.sin(angle);
-        targetPosZ = p.mz * depthFactor + Math.sin(p.t) * (0.6 * waveAmplitude);
+        targetPosZ = p.mz * depthFactor + Math.sin(p.t) * (0.5 * waveAmplitude);
 
         const distFromRing = Math.abs(dist - ringRadius);
-        scaleFactor = Math.max(0.4, 1.2 - distFromRing / 8);
+        scaleMultiplier = Math.max(0.6, 1.25 - distFromRing / 6);
       }
 
       p.cx += (targetPosX - p.cx) * lerpSpeed;
@@ -148,12 +151,8 @@ const AntigravityInner: React.FC<AntigravityProps> = ({
 
       dummy.position.set(p.cx, p.cy, p.cz);
 
-      if (needsRotation) {
-        dummy.lookAt(targetX, targetY, p.cz);
-        dummy.rotateX(Math.PI / 2);
-      }
-
-      const finalScale = scaleFactor * (0.8 + Math.sin(p.t * pulseSpeed) * 0.2 * particleVariance) * particleSize;
+      const pulse = 1 + Math.sin(p.t * pulseSpeed) * 0.15 * particleVariance;
+      const finalScale = scaleMultiplier * pulse * particleSize;
       dummy.scale.set(finalScale, finalScale, finalScale);
       dummy.updateMatrix();
 
@@ -165,10 +164,10 @@ const AntigravityInner: React.FC<AntigravityProps> = ({
 
   return (
     <instancedMesh ref={meshRef} args={[undefined, undefined, count]}>
-      {particleShape === 'capsule' && <capsuleGeometry args={[0.02, 0.08, 4, 6]} />}
-      {particleShape === 'sphere' && <sphereGeometry args={[0.025, 8, 8]} />}
-      {particleShape === 'box' && <boxGeometry args={[0.04, 0.04, 0.04]} />}
-      {particleShape === 'tetrahedron' && <tetrahedronGeometry args={[0.05]} />}
+      {particleShape === 'capsule' && <capsuleGeometry args={[0.05, 0.18, 4, 6]} />}
+      {particleShape === 'sphere' && <sphereGeometry args={[0.07, 10, 10]} />}
+      {particleShape === 'box' && <boxGeometry args={[0.1, 0.1, 0.1]} />}
+      {particleShape === 'tetrahedron' && <tetrahedronGeometry args={[0.12]} />}
       <meshBasicMaterial color={color} transparent opacity={opacity} depthWrite={false} />
     </instancedMesh>
   );
@@ -178,7 +177,7 @@ export const Antigravity: React.FC<AntigravityProps> = props => {
   return (
     <div className={`w-full h-full pointer-events-none ${props.className || ''}`}>
       <Canvas
-        camera={{ position: [0, 0, 45], fov: 35 }}
+        camera={{ position: [0, 0, 38], fov: 35 }}
         dpr={[1, 1.5]}
         gl={{ powerPreference: 'high-performance', antialias: false, alpha: true }}
       >
