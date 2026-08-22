@@ -41,20 +41,20 @@ export default function LandingPage() {
   return (
     <div className="relative min-h-screen bg-slate-50/50 text-slate-900 selection:bg-indigo-500 selection:text-white overflow-hidden">
       {/* 3D Antigravity Particle Field in Ambient Background */}
-      <div className="absolute inset-0 pointer-events-none z-0 opacity-85 overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none z-0 opacity-80 overflow-hidden">
         <Antigravity
-          count={380}
-          particleSize={0.9}
+          count={260}
+          particleSize={0.6}
           color="#6366f1"
           particleShape="sphere"
-          waveSpeed={0.8}
-          waveAmplitude={1.2}
-          lerpSpeed={0.25}
-          magnetRadius={14}
-          ringRadius={7}
+          waveSpeed={0.6}
+          waveAmplitude={0.8}
+          lerpSpeed={0.2}
+          magnetRadius={12}
+          ringRadius={5.5}
           autoAnimate={true}
-          fieldStrength={12}
-          opacity={0.9}
+          fieldStrength={10}
+          opacity={0.8}
         />
       </div>
 
