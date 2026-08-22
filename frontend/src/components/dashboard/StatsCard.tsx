@@ -1,8 +1,5 @@
-"use client";
-
 import { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
 
 interface Props {
   title: string;
@@ -15,11 +12,9 @@ interface Props {
 
 export function StatsCard({ title, value, icon: Icon, description, trend, className }: Props) {
   return (
-    <motion.div
-      whileHover={{ y: -2 }}
-      transition={{ duration: 0.2 }}
+    <div
       className={cn(
-        "bg-white dark:bg-slate-900/90 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-5 shadow-xs hover:shadow-md transition-all relative overflow-hidden",
+        "bg-white dark:bg-slate-900/90 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-5 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 relative overflow-hidden",
         className
       )}
     >
@@ -47,6 +42,6 @@ export function StatsCard({ title, value, icon: Icon, description, trend, classN
           <span className="text-[11px] text-slate-400">vs last week</span>
         </div>
       )}
-    </motion.div>
+    </div>
   );
 }

@@ -5,8 +5,8 @@ import EmailProvider from "next-auth/providers/email";
 import { prisma } from "@/lib/prisma";
 
 export const authOptions: NextAuthOptions = {
-  secret: process.env.NEXTAUTH_SECRET,
-  debug: true,
+  secret: process.env.NEXTAUTH_SECRET || "p5/SUyOnvA0fIf1hjEEVAUlR8daxBcrXOH+4f17i5lw=",
+  debug: false,
   logger: {
     error(code, metadata) {
       console.error("[NEXTAUTH_ERROR]", code, metadata);
