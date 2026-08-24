@@ -43,44 +43,63 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     async jwt({ token, user }) {
-      if (user) {
+      const email = user?.email || token?.email;
+      if (email) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { email: email.toLowerCase() },
+            select: { id: true, role: true, plan: true },
+          });
+          if (dbUser) {
+            token.id = dbUser.id;
+            token.role = dbUser.role;
+            token.plan = dbUser.plan;
+          }
+        } catch (e) {
+          console.error("JWT user lookup error:", e);
+        }
+      } else if (user) {
         token.id = user.id;
       }
       return token;
     },
     async session({ session, token }) {
-      if (session?.user) {
-        const userId = (token?.id as string) || token?.sub || (session.user as any).id;
-        if (userId) {
-          (session.user as any).id = userId;
+      if (session?.user && session.user.email) {
+        try {
+          const email = session.user.email.toLowerCase();
+          const adminEmails = (process.env.ADMIN_EMAILS || "shanmugapatelkani@gmail.com")
+            .split(",")
+            .map((e) => e.trim().toLowerCase())
+            .filter(Boolean);
 
-          try {
-            const email = session.user?.email;
-            const adminEmails = (process.env.ADMIN_EMAILS || "shanmugapatelkani@gmail.com")
-              .split(",")
-              .map((e) => e.trim().toLowerCase())
-              .filter(Boolean);
+          let dbUser = await prisma.user.findUnique({
+            where: { email },
+            select: { id: true, plan: true, role: true },
+          });
 
-            let dbUser = await prisma.user.findUnique({
-              where: { id: userId },
-              select: { plan: true, role: true },
-            });
+          const isConfiguredAdmin = Boolean(adminEmails.includes(email));
 
-            const isConfiguredAdmin = Boolean(email && adminEmails.includes(email.toLowerCase()));
-
-            if (isConfiguredAdmin && dbUser && dbUser.role !== "ADMIN") {
+          if (dbUser) {
+            if (isConfiguredAdmin && (dbUser.role !== "ADMIN" || dbUser.plan !== "ENTERPRISE")) {
               dbUser = await prisma.user.update({
-                where: { id: userId },
+                where: { id: dbUser.id },
                 data: { role: "ADMIN", plan: "ENTERPRISE" },
-                select: { plan: true, role: true },
+                select: { id: true, plan: true, role: true },
               });
             }
 
-            (session.user as any).plan = dbUser?.plan ?? "FREE";
-            (session.user as any).role = dbUser?.role ?? (isConfiguredAdmin ? "ADMIN" : "WORKSPACE");
-          } catch (err) {
-            console.error("Error resolving session user role:", err);
+            (session.user as any).id = dbUser.id;
+            (session.user as any).plan = dbUser.plan;
+            (session.user as any).role = dbUser.role;
+          } else {
+            const fallbackId = (token?.id as string) || (token?.sub as string) || (session.user as any).id;
+            (session.user as any).id = fallbackId;
+            (session.user as any).plan = (token?.plan as string) || "FREE";
+            (session.user as any).role = (token?.role as string) || (isConfiguredAdmin ? "ADMIN" : "WORKSPACE");
           }
+        } catch (err) {
+          console.error("Error resolving session user:", err);
+          (session.user as any).id = (token?.id as string) || token?.sub;
         }
       }
       return session;

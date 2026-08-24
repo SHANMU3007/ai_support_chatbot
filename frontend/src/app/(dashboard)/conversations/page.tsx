@@ -22,20 +22,37 @@ export default async function ConversationsPage() {
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
 
-  const dbUser = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { role: true },
+  const userEmail = session?.user?.email?.toLowerCase();
+  const dbUser = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { id: userId },
+        ...(userEmail ? [{ email: userEmail }] : []),
+      ],
+    },
+    select: { id: true, role: true },
   });
 
   const userRole = (session?.user as any)?.role || dbUser?.role;
-  const userEmail = session?.user?.email?.toLowerCase();
   const isAdmin =
     userRole === "ADMIN" ||
     (userEmail && adminEmails.includes(userEmail));
 
+  const resolvedUserId = dbUser?.id || userId;
+  const chatbotFilter = isAdmin
+    ? {}
+    : {
+        chatbot: {
+          OR: [
+            { userId: resolvedUserId },
+            ...(userEmail ? [{ user: { email: userEmail } }] : []),
+          ],
+        },
+      };
+
   // Admins see all chat sessions across all customer chatbots; Workspace users see only their own.
   const sessions = await prisma.chatSession.findMany({
-    where: isAdmin ? {} : { chatbot: { userId } },
+    where: chatbotFilter,
     include: {
       chatbot: {
         select: {

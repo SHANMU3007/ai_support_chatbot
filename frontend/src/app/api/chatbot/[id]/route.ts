@@ -11,8 +11,18 @@ export async function GET(_req: NextRequest, { params }: Props) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const userEmail = session.user?.email?.toLowerCase();
+  const userId = session.user?.id as string;
   const isAdmin = session.user?.role === "ADMIN";
-  const where = isAdmin ? { id: params.id } : { id: params.id, userId: session.user?.id as string };
+  const where = isAdmin
+    ? { id: params.id }
+    : {
+        id: params.id,
+        OR: [
+          ...(userId ? [{ userId }] : []),
+          ...(userEmail ? [{ user: { email: userEmail } }] : []),
+        ],
+      };
 
   const chatbot = await prisma.chatbot.findFirst({ where });
 
@@ -24,8 +34,18 @@ export async function PUT(req: NextRequest, { params }: Props) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const userEmail = session.user?.email?.toLowerCase();
+  const userId = session.user?.id as string;
   const isAdmin = session.user?.role === "ADMIN";
-  const where = isAdmin ? { id: params.id } : { id: params.id, userId: session.user?.id as string };
+  const where = isAdmin
+    ? { id: params.id }
+    : {
+        id: params.id,
+        OR: [
+          ...(userId ? [{ userId }] : []),
+          ...(userEmail ? [{ user: { email: userEmail } }] : []),
+        ],
+      };
   const body = await req.json();
 
   const chatbot = await prisma.chatbot.updateMany({
@@ -51,8 +71,18 @@ export async function DELETE(_req: NextRequest, { params }: Props) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const userEmail = session.user?.email?.toLowerCase();
+  const userId = session.user?.id as string;
   const isAdmin = session.user?.role === "ADMIN";
-  const where = isAdmin ? { id: params.id } : { id: params.id, userId: session.user?.id as string };
+  const where = isAdmin
+    ? { id: params.id }
+    : {
+        id: params.id,
+        OR: [
+          ...(userId ? [{ userId }] : []),
+          ...(userEmail ? [{ user: { email: userEmail } }] : []),
+        ],
+      };
 
   await prisma.chatbot.deleteMany({ where });
 

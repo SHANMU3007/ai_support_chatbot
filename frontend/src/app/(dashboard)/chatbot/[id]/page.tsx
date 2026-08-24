@@ -24,8 +24,19 @@ export default async function ChatbotDetailPage({ params }: Props) {
     redirect("/login");
   }
 
+  const userEmail = session?.user?.email?.toLowerCase();
+  const where = isAdmin
+    ? { id: params.id }
+    : {
+        id: params.id,
+        OR: [
+          { userId },
+          ...(userEmail ? [{ user: { email: userEmail } }] : []),
+        ],
+      };
+
   const chatbot = await prisma.chatbot.findFirst({
-    where: isAdmin ? { id: params.id } : { id: params.id, userId },
+    where,
     include: {
       user: { select: { email: true } },
       _count: { select: { sessions: true, documents: true } },

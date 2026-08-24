@@ -25,8 +25,20 @@ export default async function TrainingPage({ params }: Props) {
     redirect("/login");
   }
 
+  const isAdmin = (session.user as any).role === "ADMIN";
+  const userEmail = session.user?.email?.toLowerCase();
+  const where = isAdmin
+    ? { id: params.id }
+    : {
+        id: params.id,
+        OR: [
+          { userId },
+          ...(userEmail ? [{ user: { email: userEmail } }] : []),
+        ],
+      };
+
   const chatbot = await prisma.chatbot.findFirst({
-    where: { id: params.id, userId },
+    where,
     include: {
       documents: { orderBy: { createdAt: "desc" } },
     },

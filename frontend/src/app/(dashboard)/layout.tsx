@@ -26,10 +26,16 @@ export default async function DashboardLayout({
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
 
+  const userEmail = session.user.email?.toLowerCase();
   let dbUser = null;
   try {
-    dbUser = await prisma.user.findUnique({
-      where: { id: userId },
+    dbUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { id: userId },
+          ...(userEmail ? [{ email: userEmail }] : []),
+        ],
+      },
       select: { role: true, plan: true },
     });
   } catch (err) {

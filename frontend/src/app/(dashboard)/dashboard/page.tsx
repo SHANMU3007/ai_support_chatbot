@@ -29,15 +29,20 @@ export default async function DashboardPage() {
   let recentSessions: any[] = [];
   let followUpCount = 0;
 
+  const userEmail = session.user?.email;
+  const userFilter = userEmail
+    ? { OR: [{ userId }, { user: { email: userEmail } }] }
+    : { userId };
+
   try {
     const [cCount, mCount, dCount, rSessions, fCount] = await Promise.all([
-      prisma.chatbot.count({ where: { userId } }),
+      prisma.chatbot.count({ where: userFilter }),
       prisma.message.count({
-        where: { session: { chatbot: { userId } } },
+        where: { session: { chatbot: userFilter } },
       }),
-      prisma.document.count({ where: { chatbot: { userId } } }),
+      prisma.document.count({ where: { chatbot: userFilter } }),
       prisma.chatSession.findMany({
-        where: { chatbot: { userId } },
+        where: { chatbot: userFilter },
         take: 10,
         orderBy: { createdAt: "desc" },
         include: {
@@ -45,7 +50,7 @@ export default async function DashboardPage() {
           messages: { take: 1, orderBy: { createdAt: "desc" } },
         },
       }),
-      prisma.chatSession.count({ where: { chatbot: { userId }, needsFollowUp: true } }),
+      prisma.chatSession.count({ where: { chatbot: userFilter, needsFollowUp: true } }),
     ]);
 
     chatbotCount = cCount;
