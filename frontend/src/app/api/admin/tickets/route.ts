@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 // GET /api/admin/tickets — Retrieve tickets for current workspace or platform admin
 export async function GET(req: NextRequest) {
