@@ -100,29 +100,43 @@ class RagService:
         else:
             english_query = message
 
+        # 1. Retrieve vector chunks from ChromaDB
         query_embedding = await self.embedding_svc.embed_text(english_query)
-        chunks = await self.chroma_svc.query(
+        vector_chunks = await self.chroma_svc.query(
             chatbot_id=chatbot_id,
             query_embedding=query_embedding,
             n_results=settings.CONTEXT_CHUNKS,
             min_similarity=settings.RAG_MIN_SIMILARITY,
         )
-        
-        context = "\n\n---\n\n".join(chunks) if chunks else ""
 
-        if not context:
-            logger.info("ChromaDB produced no context for chatbot=%s, attempting Postgres fallback...", chatbot_id)
-            context = await _get_postgres_fallback_context(chatbot_id, english_query)
+        # 2. Retrieve keyword-matched chunks from Postgres
+        postgres_context = await _get_postgres_fallback_context(chatbot_id, english_query)
+        postgres_chunks = [c.strip() for c in postgres_context.split("\n\n---\n\n") if c.strip()]
+
+        # 3. Hybrid merge: combine keyword-matched chunks first, followed by vector chunks
+        combined_chunks: List[str] = []
+        seen = set()
+
+        for chunk in postgres_chunks + vector_chunks:
+            if chunk and chunk not in seen:
+                seen.add(chunk)
+                combined_chunks.append(chunk)
+
+        # Cap combined chunks to max CONTEXT_CHUNKS
+        final_chunks = combined_chunks[:settings.CONTEXT_CHUNKS]
+        context = "\n\n---\n\n".join(final_chunks) if final_chunks else ""
 
         logger.info(
-            "RAG query for chatbot=%s session=%s  chunks_retrieved=%d context_len=%d",
+            "Hybrid RAG query for chatbot=%s session=%s  vector_chunks=%d postgres_chunks=%d final_chunks=%d context_len=%d",
             chatbot_id,
             session_id,
-            len(chunks),
+            len(vector_chunks),
+            len(postgres_chunks),
+            len(final_chunks),
             len(context),
         )
 
-        # 2. Stream AI response via Groq AI Engine
+        # 4. Stream AI response via Groq AI Engine
         async for chunk in self.ai_engine.stream(
             message=message,
             context=context,

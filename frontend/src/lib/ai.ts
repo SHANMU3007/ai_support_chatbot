@@ -32,22 +32,39 @@ export async function streamAIResponse({
       const rawTexts = await prisma.rawExtractedText.findMany({
         where: { chatbotId },
         orderBy: { extractedAt: "desc" },
-        take: 3,
+        take: 10,
         select: { rawText: true },
       });
-      if (rawTexts.length > 0) {
-        activeContext = rawTexts.map((r) => r.rawText).join("\n\n---\n\n").slice(0, 8000);
-      } else {
+      let fullText = rawTexts.map((r) => r.rawText).join("\n\n---\n\n");
+      if (!fullText.trim()) {
         const docs = await prisma.document.findMany({
           where: { chatbotId, status: "DONE" },
           orderBy: { createdAt: "desc" },
-          take: 5,
+          take: 10,
           select: { content: true },
         });
-        const nonEmp = docs.map((d) => d.content).filter(Boolean);
-        if (nonEmp.length > 0) {
-          activeContext = nonEmp.join("\n\n---\n\n").slice(0, 8000);
-        }
+        fullText = docs.map((d) => d.content).filter(Boolean).join("\n\n---\n\n");
+      }
+
+      if (fullText.trim()) {
+        // Split fullText into paragraph blocks (~1400 chars)
+        const blocks = fullText.split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
+        const queryWords = Array.from(
+          new Set(message.toLowerCase().split(/\s+/).filter((w) => w.length > 2))
+        );
+        
+        const scoredBlocks = blocks.map((b) => {
+          const bLower = b.toLowerCase();
+          let score = 0;
+          for (const word of queryWords) {
+            if (bLower.includes(word)) score += 1;
+          }
+          return { block: b, score };
+        });
+
+        scoredBlocks.sort((a, b) => b.score - a.score);
+        const topBlocks = scoredBlocks.slice(0, 6).map((x) => x.block);
+        activeContext = topBlocks.join("\n\n---\n\n").slice(0, 8000);
       }
     } catch (err) {
       console.warn("Failed to fetch fallback context from Prisma:", err);
