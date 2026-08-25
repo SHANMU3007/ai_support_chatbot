@@ -35,6 +35,12 @@ export default async function ConversationDetailPage({ params }: Props) {
 
   if (!chatSession) notFound();
 
+  const metadata = (chatSession.metadata as any) || {};
+  const contactName = metadata.name || metadata.fullname || metadata.user_name || metadata.userName;
+  const contactEmail = metadata.email || metadata.user_email || metadata.userEmail;
+  const contactPhone = metadata.phone || metadata.mobile || metadata.phoneNumber || metadata.userPhone;
+  const hasDetails = contactName || contactEmail || contactPhone;
+
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
       <div className="flex items-center gap-4">
@@ -49,12 +55,42 @@ export default async function ConversationDetailPage({ params }: Props) {
             Conversation — {chatSession.chatbot.name}
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Visitor: {chatSession.visitorId} ·{" "}
+            Visitor ID: {chatSession.visitorId} ·{" "}
             {format(new Date(chatSession.createdAt), "PPpp")}
           </p>
         </div>
         <Badge variant="outline">{chatSession.language.toUpperCase()}</Badge>
       </div>
+
+      {/* Visitor Lead Contact Details Card */}
+      {hasDetails && (
+        <div className="bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/50 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="space-y-1">
+            <p className="text-xs font-bold text-indigo-900 dark:text-indigo-200 uppercase tracking-wider">
+              Collected Visitor Details
+            </p>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-medium text-slate-800 dark:text-slate-200">
+              {contactName && (
+                <span>
+                  👤 <strong>Name:</strong> {contactName}
+                </span>
+              )}
+              {contactEmail && (
+                <span>
+                  ✉ <strong>Email:</strong> {contactEmail}
+                </span>
+              )}
+              {contactPhone && (
+                <span>
+                  📞 <strong>Phone:</strong> {contactPhone}
+                </span>
+              )}
+            </div>
+          </div>
+          <Badge className="bg-indigo-600 text-white self-start sm:self-auto">Pre-Chat Lead</Badge>
+        </div>
+      )}
+
 
       <div className="bg-white rounded-xl border p-6 space-y-4">
         {chatSession.messages.map((msg) => (

@@ -105,6 +105,8 @@ model Chatbot {
   rawExtractedTexts   RawExtractedText[]
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
+
+  @@index([userId])
 }
 
 model Document {
@@ -120,6 +122,9 @@ model Document {
   rawExtractedText RawExtractedText?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
+
+  @@index([chatbotId])
+  @@index([status])
 }
 
 model RawExtractedText {
@@ -155,6 +160,10 @@ model ChatSession {
   sentimentUpdatedAt DateTime?
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
+
+  @@index([chatbotId])
+  @@index([visitorId])
+  @@index([needsFollowUp])
 }
 
 model Message {
@@ -166,6 +175,8 @@ model Message {
   tokens     Int?
   confidence Float?
   createdAt  DateTime    @default(now())
+
+  @@index([sessionId])
 }
 
 model FeedbackTicket {
@@ -186,6 +197,10 @@ model FeedbackTicket {
   resolvedAt       DateTime?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
+
+  @@index([chatbotId])
+  @@index([status])
+  @@index([visitorId])
 }
 
 enum PrivacyLevel {

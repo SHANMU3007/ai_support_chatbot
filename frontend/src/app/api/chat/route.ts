@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { message, sessionId, botId, language = "en", history: clientHistory = [] } = body;
+    const { message, sessionId, botId, language = "en", userDetails, history: clientHistory = [] } = body;
 
     if (!message || !botId) {
       return NextResponse.json(
@@ -50,6 +50,14 @@ export async function POST(req: NextRequest) {
           chatbotId: botId,
           visitorId: sessionId ? sessionId.split(":")[0] : visitorId,
           language,
+          metadata: userDetails && Object.keys(userDetails).length > 0 ? userDetails : undefined,
+        },
+      });
+    } else if (userDetails && Object.keys(userDetails).length > 0 && (!session.metadata || Object.keys(session.metadata as object).length === 0)) {
+      session = await prisma.chatSession.update({
+        where: { id: session.id },
+        data: {
+          metadata: userDetails,
         },
       });
     }

@@ -19,6 +19,7 @@ import {
   User,
   Sparkles,
   ShieldCheck,
+  Loader2,
 } from "lucide-react";
 
 const STEPS = ["Basic Info", "Personality", "Welcome", "White-Label & Form", "Review"];
@@ -505,9 +506,18 @@ export default function CreateChatbotPage() {
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             ) : (
-              <Button className="ml-auto" onClick={handleCreate} disabled={loading}>
-                {loading ? "Creating..." : "Create Chatbot"}
-                <Bot className="ml-2 h-4 w-4" />
+              <Button className="ml-auto bg-indigo-600 hover:bg-indigo-700 font-semibold" onClick={handleCreate} disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating Chatbot...
+                  </>
+                ) : (
+                  <>
+                    Create Chatbot & Continue
+                    <Bot className="ml-2 h-4 w-4" />
+                  </>
+                )}
               </Button>
             )}
           </div>

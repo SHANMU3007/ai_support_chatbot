@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,6 +15,10 @@ import {
   Sparkles,
   AlertCircle,
   HelpCircle,
+  Bot,
+  Settings,
+  Code,
+  ArrowRight,
 } from "lucide-react";
 
 interface FAQ {
@@ -29,6 +34,7 @@ interface Props {
 type SaveStatus = "idle" | "saving" | "processing" | "saved" | "error";
 
 export function FAQEditor({ chatbotId }: Props) {
+  const router = useRouter();
   const [faqs, setFaqs] = useState<FAQ[]>([
     { id: "1", question: "", answer: "" },
   ]);
@@ -201,21 +207,56 @@ export function FAQEditor({ chatbotId }: Props) {
       )}
 
       {status === "saved" && (
-        <div className="flex items-center gap-3 text-green-700 text-sm bg-green-50 border border-green-200 px-4 py-3 rounded-xl animate-in fade-in slide-in-from-top-2 duration-300">
-          <CheckCircle className="h-5 w-5 flex-shrink-0" />
-          <div>
-            <p className="font-medium">FAQs Saved & Trained!</p>
-            <p className="text-green-600 text-xs mt-0.5">
-              {chunkCount} knowledge chunks created. Your chatbot can now answer
-              these questions.
-            </p>
+        <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-50 to-indigo-50 border border-emerald-200/80 space-y-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-xl bg-emerald-600 text-white flex-shrink-0 shadow-sm">
+              <CheckCircle className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="font-bold text-gray-900 text-base">FAQs Saved & Knowledge Base Trained!</p>
+              <p className="text-emerald-700 text-xs mt-0.5">
+                {chunkCount} knowledge chunk{chunkCount !== 1 ? "s" : ""} created. Your chatbot is updated and ready.
+              </p>
+              <p className="text-gray-500 text-xs mt-1">Where would you like to go next?</p>
+            </div>
           </div>
-          <button
-            onClick={() => setStatus("idle")}
-            className="ml-auto text-xs text-green-400 hover:text-green-600 underline flex-shrink-0"
-          >
-            Done
-          </button>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+            <button
+              onClick={() => router.push(`/chatbot/${chatbotId}/preview`)}
+              className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/25 hover:shadow-lg"
+            >
+              <Bot className="h-4 w-4" />
+              Test Chatbot Page
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+
+            <button
+              onClick={() => router.push(`/chatbot/${chatbotId}/settings`)}
+              className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-white hover:bg-gray-50 text-gray-800 border border-gray-200 text-xs font-semibold transition-all shadow-sm hover:border-gray-300"
+            >
+              <Settings className="h-4 w-4 text-gray-600" />
+              Configure Settings
+            </button>
+
+            <button
+              onClick={() => router.push(`/chatbot/${chatbotId}/embed`)}
+              className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-all shadow-md shadow-indigo-600/25"
+            >
+              <Code className="h-4 w-4" />
+              Get Embed Code
+            </button>
+          </div>
+
+          <div className="pt-2 border-t border-emerald-200/50 flex justify-between items-center text-xs">
+            <span className="text-gray-500">Add more FAQs or stay here:</span>
+            <button
+              onClick={() => setStatus("idle")}
+              className="text-indigo-600 hover:text-indigo-800 font-semibold underline"
+            >
+              Dismiss / Add FAQs
+            </button>
+          </div>
         </div>
       )}
 

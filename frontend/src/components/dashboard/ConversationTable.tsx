@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 
 interface Session {
   id: string;
+  visitorId: string;
+  metadata?: any;
   createdAt: Date;
   language: string;
   chatbot: { name: string; primaryColor: string; privacyLevel?: "STANDARD" | "PII_MASKED" | "ZERO_RETENTION" };
@@ -15,6 +17,14 @@ interface Session {
 
 interface Props {
   sessions: Session[];
+}
+
+function getVisitorContact(metadata: any): { name?: string; email?: string; phone?: string } {
+  if (!metadata || typeof metadata !== "object") return {};
+  const name = metadata.name || metadata.fullname || metadata.user_name || metadata.userName;
+  const email = metadata.email || metadata.user_email || metadata.userEmail;
+  const phone = metadata.phone || metadata.mobile || metadata.phoneNumber || metadata.userPhone;
+  return { name, email, phone };
 }
 
 export function ConversationTable({ sessions }: Props) {
@@ -32,6 +42,9 @@ export function ConversationTable({ sessions }: Props) {
         <tr className="border-b">
           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
             Chatbot
+          </th>
+          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            Visitor / Lead Details
           </th>
           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
             Last Message
@@ -53,6 +66,8 @@ export function ConversationTable({ sessions }: Props) {
       <tbody className="divide-y">
         {sessions.map((session) => {
           const isZeroRetention = session.chatbot.privacyLevel === "ZERO_RETENTION";
+          const contact = getVisitorContact(session.metadata);
+          const hasContactInfo = contact.name || contact.email || contact.phone;
 
           return (
             <tr key={session.id} className="hover:bg-gray-50 dark:hover:bg-slate-900/50">
@@ -72,6 +87,31 @@ export function ConversationTable({ sessions }: Props) {
                     </span>
                   )}
                 </Link>
+              </td>
+              <td className="px-4 py-3 text-sm">
+                {hasContactInfo ? (
+                  <div className="flex flex-col">
+                    {contact.name && (
+                      <span className="font-semibold text-slate-900 dark:text-white text-xs">
+                        👤 {contact.name}
+                      </span>
+                    )}
+                    {contact.email && (
+                      <span className="text-[11px] text-indigo-600 dark:text-indigo-400">
+                        ✉ {contact.email}
+                      </span>
+                    )}
+                    {contact.phone && (
+                      <span className="text-[11px] text-emerald-600 dark:text-emerald-400">
+                        📞 {contact.phone}
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-xs text-slate-500 font-mono bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+                    Visitor #{session.visitorId}
+                  </span>
+                )}
               </td>
               <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 max-w-xs truncate">
                 {isZeroRetention ? (
@@ -110,3 +150,4 @@ export function ConversationTable({ sessions }: Props) {
     </table>
   );
 }
+

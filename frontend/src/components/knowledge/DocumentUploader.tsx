@@ -13,6 +13,10 @@ import {
   Loader2,
   Sparkles,
   ArrowRight,
+  Bot,
+  Settings,
+  Code,
+  ExternalLink,
 } from "lucide-react";
 
 interface Props {
@@ -316,17 +320,57 @@ export function DocumentUploader({ chatbotId }: Props) {
             );
           })}
 
-          {/* CTA button after all uploads finish */}
+          {/* CTA post-chunking redirection choices */}
           {allFinished && anyDone && (
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <button
-                onClick={handleViewKnowledgeBase}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-all shadow-md shadow-indigo-600/25 hover:shadow-lg"
-              >
-                <CheckCircle className="h-4 w-4" />
-                Done! View Knowledge Base
-                <ArrowRight className="h-4 w-4" />
-              </button>
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 p-5 rounded-2xl bg-gradient-to-r from-emerald-50 to-indigo-50 border border-emerald-200/80 space-y-4 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-emerald-600 text-white shadow-sm">
+                  <CheckCircle className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-gray-900 text-base">Knowledge Base Ready & Trained!</h4>
+                  <p className="text-xs text-gray-600">
+                    Chunking complete. Where would you like to go next?
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <button
+                  onClick={() => router.push(`/chatbot/${chatbotId}/preview`)}
+                  className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/25 hover:shadow-lg"
+                >
+                  <Bot className="h-4 w-4" />
+                  Test Chatbot Page
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </button>
+
+                <button
+                  onClick={() => router.push(`/chatbot/${chatbotId}/settings`)}
+                  className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-white hover:bg-gray-50 text-gray-800 border border-gray-200 text-xs font-semibold transition-all shadow-sm hover:border-gray-300"
+                >
+                  <Settings className="h-4 w-4 text-gray-600" />
+                  Configure Settings
+                </button>
+
+                <button
+                  onClick={() => router.push(`/chatbot/${chatbotId}/embed`)}
+                  className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-all shadow-md shadow-indigo-600/25"
+                >
+                  <Code className="h-4 w-4" />
+                  Get Embed Code
+                </button>
+              </div>
+
+              <div className="pt-2 border-t border-emerald-200/50 flex justify-between items-center text-xs">
+                <span className="text-gray-500">Or stay on training page:</span>
+                <button
+                  onClick={handleViewKnowledgeBase}
+                  className="text-indigo-600 hover:text-indigo-800 font-semibold underline"
+                >
+                  Refresh Documents List
+                </button>
+              </div>
             </div>
           )}
         </div>
