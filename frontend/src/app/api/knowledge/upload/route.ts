@@ -18,9 +18,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "file and chatbotId are required" }, { status: 400 });
   }
 
-  // Verify ownership
+  const userId = session.user?.id as string;
+  const userEmail = session.user?.email?.toLowerCase();
+  const userRole = (session.user as any)?.role;
+  const adminEmails = (process.env.ADMIN_EMAILS || "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  const isAdmin = userRole === "ADMIN" || (userEmail && adminEmails.includes(userEmail));
+
+  // Verify ownership (admin can upload to any chatbot)
   const chatbot = await prisma.chatbot.findFirst({
-    where: { id: chatbotId, userId: session.user?.id as string },
+    where: isAdmin
+      ? { id: chatbotId }
+      : {
+          id: chatbotId,
+          OR: [
+            ...(userId ? [{ userId }] : []),
+            ...(userEmail ? [{ user: { email: userEmail } }] : []),
+          ],
+        },
   });
   if (!chatbot) return NextResponse.json({ error: "Chatbot not found" }, { status: 404 });
 
@@ -41,35 +58,27 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // Forward to FastAPI for processing (await fetch to prevent Vercel lambda termination)
+  // Fire-and-forget FastAPI call — do NOT await so the route returns immediately.
+  // The frontend polls /api/knowledge/status every 3 s to detect DONE/FAILED.
   const backendUrl = getFastApiUrl("/ingest/document");
   const backendFormData = new FormData();
   backendFormData.append("file", file);
   backendFormData.append("chatbot_id", chatbotId);
   backendFormData.append("document_id", document.id);
 
-  try {
-    const res = await fetch(backendUrl, {
-      method: "POST",
-      body: backendFormData,
-    });
-
-    if (!res.ok) {
-      console.error(`FastAPI ingest/document returned HTTP ${res.status}`);
+  fetch(backendUrl, {
+    method: "POST",
+    body: backendFormData,
+  }).catch(async (err) => {
+    console.error("FastAPI connection error during document upload:", err);
+    try {
       await prisma.document.update({
         where: { id: document.id },
         data: { status: "FAILED" },
       });
-      return NextResponse.json({ error: "Backend document processing failed" }, { status: 502 });
-    }
-  } catch (err) {
-    console.error("FastAPI connection error during document upload:", err);
-    await prisma.document.update({
-      where: { id: document.id },
-      data: { status: "FAILED" },
-    });
-    return NextResponse.json({ error: "Backend server is unreachable" }, { status: 502 });
-  }
+    } catch {}
+  });
 
+  // Return immediately with PENDING status — frontend polls for completion
   return NextResponse.json(document, { status: 201 });
 }

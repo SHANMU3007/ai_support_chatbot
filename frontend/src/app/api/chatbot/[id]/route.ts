@@ -60,6 +60,10 @@ export async function PUT(req: NextRequest, { params }: Props) {
       language: body.language,
       isActive: body.isActive,
       ...(body.privacyLevel ? { privacyLevel: body.privacyLevel } : {}),
+      ...(body.whiteLabelEnabled !== undefined ? { whiteLabelEnabled: Boolean(body.whiteLabelEnabled) } : {}),
+      ...(body.whiteLabelBrand !== undefined ? { whiteLabelBrand: body.whiteLabelBrand || null } : {}),
+      ...(body.requireUserDetails !== undefined ? { requireUserDetails: Boolean(body.requireUserDetails) } : {}),
+      ...(body.userDetailFields !== undefined ? { userDetailFields: body.userDetailFields } : {}),
     },
   });
 

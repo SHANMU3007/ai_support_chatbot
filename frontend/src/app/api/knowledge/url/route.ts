@@ -25,9 +25,26 @@ export async function POST(req: NextRequest) {
   // Clamp max_pages between 1 and 500 (default 15 for fast completion)
   const clampedMaxPages = Math.min(Math.max(Number(maxPages) || 15, 1), 500);
 
-  // Verify chatbot ownership
+  const userId = session.user?.id as string;
+  const userEmail = session.user?.email?.toLowerCase();
+  const userRole = (session.user as any)?.role;
+  const adminEmails = (process.env.ADMIN_EMAILS || "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  const isAdmin = userRole === "ADMIN" || (userEmail && adminEmails.includes(userEmail));
+
+  // Verify chatbot ownership (admin can ingest for any chatbot)
   const chatbot = await prisma.chatbot.findFirst({
-    where: { id: chatbotId, userId: session.user?.id as string },
+    where: isAdmin
+      ? { id: chatbotId }
+      : {
+          id: chatbotId,
+          OR: [
+            ...(userId ? [{ userId }] : []),
+            ...(userEmail ? [{ user: { email: userEmail } }] : []),
+          ],
+        },
   });
   if (!chatbot) return NextResponse.json({ error: "Chatbot not found" }, { status: 404 });
 

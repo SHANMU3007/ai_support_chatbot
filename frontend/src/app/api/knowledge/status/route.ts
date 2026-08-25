@@ -11,11 +11,33 @@ export async function GET(req: NextRequest) {
   const chatbotId = req.nextUrl.searchParams.get("chatbotId");
   if (!chatbotId) return NextResponse.json({ error: "chatbotId required" }, { status: 400 });
 
+  const userId = session.user?.id as string;
+  const userEmail = session.user?.email?.toLowerCase();
+  const userRole = (session.user as any)?.role;
+
+  const adminEmails = (process.env.ADMIN_EMAILS || "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+
+  const isAdmin =
+    userRole === "ADMIN" || (userEmail && adminEmails.includes(userEmail));
+
+  // Admins can query any chatbot's documents; workspace users only their own
+  const whereClause = isAdmin
+    ? { chatbotId }
+    : {
+        chatbotId,
+        chatbot: {
+          OR: [
+            ...(userId ? [{ userId }] : []),
+            ...(userEmail ? [{ user: { email: userEmail } }] : []),
+          ],
+        },
+      };
+
   const documents = await prisma.document.findMany({
-    where: {
-      chatbotId,
-      chatbot: { userId: session.user?.id as string },
-    },
+    where: whereClause,
     orderBy: { createdAt: "desc" },
   });
 

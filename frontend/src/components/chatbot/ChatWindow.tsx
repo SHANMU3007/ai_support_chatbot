@@ -6,9 +6,10 @@ import { ChatInput } from "./ChatInput";
 import { MessageBubble } from "./MessageBubble";
 import { TypingIndicator } from "./TypingIndicator";
 import { FeedbackModal, TicketItem } from "./FeedbackModal";
+import { PreChatForm, UserDetailField, CollectedUserDetails } from "./PreChatForm";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bot, RotateCcw, Sparkles, Zap, LifeBuoy, CheckCircle2 } from "lucide-react";
+import { Bot, RotateCcw, Sparkles, Zap, LifeBuoy } from "lucide-react";
 
 interface ChatWindowProps {
   chatbotId: string;
@@ -17,6 +18,12 @@ interface ChatWindowProps {
   welcomeMessage: string;
   primaryColor: string;
   language: string;
+  // White-label
+  whiteLabelEnabled?: boolean;
+  whiteLabelBrand?: string | null;
+  // Pre-chat form
+  requireUserDetails?: boolean;
+  userDetailFields?: UserDetailField[];
 }
 
 export function ChatWindow({
@@ -26,16 +33,24 @@ export function ChatWindow({
   welcomeMessage,
   primaryColor,
   language,
+  whiteLabelEnabled = false,
+  whiteLabelBrand,
+  requireUserDetails = false,
+  userDetailFields = [],
 }: ChatWindowProps) {
+  const [userDetails, setUserDetails] = useState<CollectedUserDetails | null>(
+    requireUserDetails ? null : {}
+  );
+
   const { messages, isLoading, sendMessage, clearChat, visitorId } = useChat({
     botId: chatbotId,
     language,
+    userDetails: userDetails || undefined,
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [resolvedTicketsCount, setResolvedTicketsCount] = useState(0);
 
-  // Text-to-Speech hook
   const {
     isSpeaking,
     currentMessageId,
@@ -48,7 +63,6 @@ export function ChatWindow({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
-  // Initial check for visitor's resolved tickets to show notification badge
   useEffect(() => {
     if (!chatbotId || !visitorId) return;
     fetch(`/api/feedback?botId=${chatbotId}&visitorId=${visitorId}`)
@@ -62,7 +76,6 @@ export function ChatWindow({
       .catch(() => {});
   }, [chatbotId, visitorId]);
 
-  // Stop TTS when chat is cleared
   const handleClearChat = () => {
     stopSpeaking();
     clearChat();
@@ -73,17 +86,40 @@ export function ChatWindow({
     setResolvedTicketsCount(resolved.length);
   };
 
-  // Show typing indicator when assistant message is empty and loading
+  const handlePreChatSubmit = (details: CollectedUserDetails) => {
+    setUserDetails(details);
+  };
+
   const lastMessage = messages[messages.length - 1];
   const showTyping =
     isLoading && lastMessage?.role === "assistant" && lastMessage.content === "";
 
-  // Starter prompt suggestions
   const starterPrompts = [
     "What services do you provide?",
     "How does pricing work?",
     "How can I contact a human agent?",
   ];
+
+  // Determine the powered-by label
+  const poweredByLabel = whiteLabelEnabled
+    ? whiteLabelBrand || businessName
+    : "Conciergo";
+
+  // Show pre-chat form if requireUserDetails and user hasn't submitted yet
+  if (requireUserDetails && userDetails === null) {
+    return (
+      <div className="flex flex-col h-full rounded-none sm:rounded-3xl shadow-2xl overflow-hidden border border-slate-200/80 sm:border-slate-700/60 bg-white dark:bg-slate-900">
+        <PreChatForm
+          chatbotName={chatbotName}
+          businessName={businessName}
+          primaryColor={primaryColor}
+          welcomeMessage="Let's chat! Fill in a few details to get started."
+          fields={userDetailFields}
+          onSubmit={handlePreChatSubmit}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full rounded-none sm:rounded-3xl shadow-2xl overflow-hidden border border-slate-200/80 sm:border-slate-700/60 bg-white dark:bg-slate-900 transition-all relative">
@@ -108,7 +144,6 @@ export function ChatWindow({
         </div>
 
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          {/* Feedback & Complaint Button */}
           <motion.button
             whileTap={{ scale: 0.92 }}
             onClick={() => setIsFeedbackOpen(true)}
@@ -140,7 +175,6 @@ export function ChatWindow({
 
       {/* Messages Scroll Area */}
       <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4 bg-gradient-to-b from-slate-50/90 via-slate-50/40 to-white dark:from-slate-900 dark:to-slate-950">
-        {/* Welcome message */}
         <MessageBubble
           message={{
             id: "welcome",
@@ -156,7 +190,6 @@ export function ChatWindow({
           ttsSupported={ttsSupported}
         />
 
-        {/* Quick starter prompt chips (shown when no messages yet) */}
         {messages.length === 0 && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -181,7 +214,6 @@ export function ChatWindow({
           </motion.div>
         )}
 
-        {/* Message stream */}
         <AnimatePresence initial={false}>
           {messages.map((msg) => (
             <MessageBubble
@@ -210,7 +242,7 @@ export function ChatWindow({
         language={language}
       />
 
-      {/* Feedback & Rectification Modal */}
+      {/* Feedback Modal */}
       <FeedbackModal
         isOpen={isFeedbackOpen}
         onClose={() => setIsFeedbackOpen(false)}

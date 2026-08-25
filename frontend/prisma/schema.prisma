@@ -80,24 +80,30 @@ model Payment {
 }
 
 model Chatbot {
-  id             String         @id @default(cuid())
-  userId         String
-  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name           String
-  businessName   String
-  description    String?
-  systemPrompt   String         @db.Text
-  primaryColor   String         @default("#6366f1")
-  welcomeMessage String         @default("Hi! How can I help you today?")
-  language       String         @default("en")
-  isActive       Boolean        @default(true)
-  telegramToken  String?
-  privacyLevel   PrivacyLevel   @default(PII_MASKED)
-  documents      Document[]
-  sessions       ChatSession[]
-  tickets        FeedbackTicket[]
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  id                  String         @id @default(cuid())
+  userId              String
+  user                User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                String
+  businessName        String
+  description         String?
+  systemPrompt        String         @db.Text
+  primaryColor        String         @default("#6366f1")
+  welcomeMessage      String         @default("Hi! How can I help you today?")
+  language            String         @default("en")
+  isActive            Boolean        @default(true)
+  telegramToken       String?
+  privacyLevel        PrivacyLevel   @default(PII_MASKED)
+  // White-label: hides "Powered by Conciergo" branding (paid add-on)
+  whiteLabelEnabled   Boolean        @default(false)
+  whiteLabelBrand     String?        // Custom brand name shown to end-users when white-label is on
+  // Pre-chat user details form
+  requireUserDetails  Boolean        @default(false)
+  userDetailFields    Json?          // JSON: [{id, label, type, required}]
+  documents           Document[]
+  sessions            ChatSession[]
+  tickets             FeedbackTicket[]
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
 }
 
 model Document {

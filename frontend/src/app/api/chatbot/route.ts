@@ -30,8 +30,19 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { name, businessName, description, systemPrompt, primaryColor, welcomeMessage, language } =
-    body;
+  const {
+    name,
+    businessName,
+    description,
+    systemPrompt,
+    primaryColor,
+    welcomeMessage,
+    language,
+    whiteLabelEnabled,
+    whiteLabelBrand,
+    requireUserDetails,
+    userDetailFields,
+  } = body;
 
   if (!name || !businessName || !systemPrompt) {
     return NextResponse.json(
@@ -63,6 +74,10 @@ export async function POST(req: NextRequest) {
       primaryColor: primaryColor || "#6366f1",
       welcomeMessage: welcomeMessage || "Hi! How can I help you today?",
       language: language || "en",
+      whiteLabelEnabled: Boolean(whiteLabelEnabled),
+      whiteLabelBrand: whiteLabelBrand || null,
+      requireUserDetails: Boolean(requireUserDetails),
+      userDetailFields: userDetailFields || [],
     },
   });
 

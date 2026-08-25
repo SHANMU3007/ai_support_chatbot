@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useDropzone } from "react-dropzone";
+import { useRouter } from "next/navigation";
 import { Progress } from "@/components/ui/progress";
 import {
   Upload,
@@ -11,6 +12,7 @@ import {
   FileText,
   Loader2,
   Sparkles,
+  ArrowRight,
 } from "lucide-react";
 
 interface Props {
@@ -27,24 +29,27 @@ interface UploadState {
 }
 
 export function DocumentUploader({ chatbotId }: Props) {
+  const router = useRouter();
   const [uploads, setUploads] = useState<UploadState[]>([]);
+
+  // Use a stable ref to the uploads so the polling interval doesn't get recreated
+  // every time uploads changes (which caused the "slow" button issue)
+  const uploadsRef = useRef<UploadState[]>([]);
+  uploadsRef.current = uploads;
+
   const pollRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Poll for processing status
+  // Single stable polling interval — checks uploadsRef instead of closure-captured uploads
   useEffect(() => {
-    const processingDocs = uploads.filter(
-      (u) => u.status === "processing" && u.documentId
-    );
-    if (processingDocs.length === 0) {
-      if (pollRef.current) clearInterval(pollRef.current);
-      return;
-    }
-
     const check = async () => {
+      const current = uploadsRef.current;
+      const processingDocs = current.filter(
+        (u) => u.status === "processing" && u.documentId
+      );
+      if (processingDocs.length === 0) return;
+
       try {
-        const res = await fetch(
-          `/api/knowledge/status?chatbotId=${chatbotId}`
-        );
+        const res = await fetch(`/api/knowledge/status?chatbotId=${chatbotId}`);
         if (!res.ok) return;
         const docs = await res.json();
 
@@ -72,7 +77,7 @@ export function DocumentUploader({ chatbotId }: Props) {
           })
         );
       } catch {
-        /* ignore */
+        /* ignore network errors during polling */
       }
     };
 
@@ -80,11 +85,11 @@ export function DocumentUploader({ chatbotId }: Props) {
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [uploads, chatbotId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatbotId]); // Only depend on chatbotId, not uploads
 
   const uploadFile = useCallback(
     async (file: File) => {
-      const id = `${file.name}-${Date.now()}`;
       setUploads((prev) => [
         { name: file.name, progress: 0, status: "uploading" },
         ...prev,
@@ -95,7 +100,7 @@ export function DocumentUploader({ chatbotId }: Props) {
         formData.append("file", file);
         formData.append("chatbotId", chatbotId);
 
-        // Simulate upload progress
+        // Optimistic progress animation while uploading
         const progressInterval = setInterval(() => {
           setUploads((prev) =>
             prev.map((u) =>
@@ -120,6 +125,7 @@ export function DocumentUploader({ chatbotId }: Props) {
 
         const data = await res.json();
 
+        // Immediately move to "processing" — polling will detect DONE/FAILED
         setUploads((prev) =>
           prev.map((u) =>
             u.name === file.name && u.status === "uploading"
@@ -183,7 +189,7 @@ export function DocumentUploader({ chatbotId }: Props) {
       case "processing":
         return {
           icon: <Sparkles className="h-4 w-4 animate-pulse text-amber-500" />,
-          text: "Processing & embedding content...",
+          text: "Processing & embedding content into knowledge base...",
           color: "text-amber-600",
         };
       case "done":
@@ -199,6 +205,18 @@ export function DocumentUploader({ chatbotId }: Props) {
           color: "text-red-500",
         };
     }
+  };
+
+  // Derive completion state for the CTA
+  const hasAnyUpload = uploads.length > 0;
+  const allFinished =
+    hasAnyUpload &&
+    uploads.every((u) => u.status === "done" || u.status === "error");
+  const anyDone = uploads.some((u) => u.status === "done");
+
+  const handleViewKnowledgeBase = () => {
+    // Refresh the Next.js server component so the document list updates
+    router.refresh();
   };
 
   return (
@@ -297,6 +315,20 @@ export function DocumentUploader({ chatbotId }: Props) {
               </div>
             );
           })}
+
+          {/* CTA button after all uploads finish */}
+          {allFinished && anyDone && (
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <button
+                onClick={handleViewKnowledgeBase}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-all shadow-md shadow-indigo-600/25 hover:shadow-lg"
+              >
+                <CheckCircle className="h-4 w-4" />
+                Done! View Knowledge Base
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

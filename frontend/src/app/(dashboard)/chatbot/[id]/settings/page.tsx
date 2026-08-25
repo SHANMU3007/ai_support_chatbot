@@ -27,6 +27,8 @@ import {
   ShieldCheck,
   Lock,
   EyeOff,
+  User,
+  Plus,
 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
@@ -104,6 +106,16 @@ export default function ChatbotSettingsPage({ params }: Props) {
     language: "en",
     isActive: true,
     privacyLevel: "PII_MASKED",
+    whiteLabelEnabled: false,
+    whiteLabelBrand: "",
+    requireUserDetails: false,
+    userDetailFields: [] as Array<{
+      id: string;
+      label: string;
+      type: "text" | "email" | "phone" | "select" | "radio";
+      required: boolean;
+      options?: string[];
+    }>,
   });
 
   useEffect(() => {
@@ -121,6 +133,10 @@ export default function ChatbotSettingsPage({ params }: Props) {
             language: data.language || "en",
             isActive: data.isActive ?? true,
             privacyLevel: data.privacyLevel || "PII_MASKED",
+            whiteLabelEnabled: data.whiteLabelEnabled ?? false,
+            whiteLabelBrand: data.whiteLabelBrand || "",
+            requireUserDetails: data.requireUserDetails ?? false,
+            userDetailFields: data.userDetailFields || [],
           });
         }
       })
@@ -221,7 +237,7 @@ export default function ChatbotSettingsPage({ params }: Props) {
     }
   };
 
-  const update = (key: string, value: string | boolean) =>
+  const update = (key: string, value: string | boolean | any[]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
   const activeColor = form.primaryColor || "#0f172a";
@@ -553,6 +569,202 @@ export default function ChatbotSettingsPage({ params }: Props) {
                 </div>
               </div>
             </CardContent>
+          </Card>
+
+          {/* White-Label Branding */}
+          <Card className="border-gray-200 shadow-xs">
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-slate-900 text-white">
+                    <EyeOff className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">White-Label Branding</CardTitle>
+                    <CardDescription>
+                      Hide "Powered by Conciergo" — your clients see only your brand
+                    </CardDescription>
+                  </div>
+                </div>
+                <Switch
+                  checked={form.whiteLabelEnabled}
+                  onCheckedChange={(val) => update("whiteLabelEnabled", val)}
+                />
+              </div>
+            </CardHeader>
+            {form.whiteLabelEnabled && (
+              <CardContent className="space-y-4 pt-0">
+                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800 flex items-start gap-2">
+                  <Sparkles className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
+                  <p><strong>Paid add-on:</strong> ₹499/mo added to your subscription. You will be billed at your next cycle.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Custom Brand Name (shown to end-users)
+                  </Label>
+                  <Input
+                    value={form.whiteLabelBrand}
+                    onChange={(e) => update("whiteLabelBrand", e.target.value)}
+                    placeholder={form.businessName || "Your Brand Name"}
+                  />
+                  <p className="text-xs text-gray-500">
+                    Leave blank to use: <strong>{form.businessName}</strong>
+                  </p>
+                </div>
+              </CardContent>
+            )}
+          </Card>
+
+          {/* Pre-chat User Details Form */}
+          <Card className="border-indigo-100 shadow-xs">
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-indigo-600 text-white">
+                    <User className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Pre-chat User Details Form</CardTitle>
+                    <CardDescription>
+                      Collect visitor info (Name, Mobile, Email) before the chat starts
+                    </CardDescription>
+                  </div>
+                </div>
+                <Switch
+                  checked={form.requireUserDetails}
+                  onCheckedChange={(val) => {
+                    update("requireUserDetails", val);
+                    if (val && form.userDetailFields.length === 0) {
+                      update("userDetailFields", [
+                        { id: "name", label: "Name", type: "text", required: true },
+                        { id: "mobile", label: "Mobile", type: "phone", required: true },
+                        { id: "email", label: "E-mail", type: "email", required: false },
+                      ]);
+                    }
+                  }}
+                />
+              </div>
+            </CardHeader>
+
+            {form.requireUserDetails && (
+              <CardContent className="space-y-3 pt-0">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Form Fields</p>
+
+                {form.userDetailFields.map((field, idx) => (
+                  <div
+                    key={field.id}
+                    className="bg-gray-50 rounded-xl border border-gray-200 p-3 space-y-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={field.label}
+                        onChange={(e) =>
+                          update(
+                            "userDetailFields",
+                            form.userDetailFields.map((f, i) =>
+                              i === idx ? { ...f, label: e.target.value } : f
+                            )
+                          )
+                        }
+                        placeholder="Field label"
+                        className="flex-1 h-8 text-xs"
+                      />
+                      <select
+                        value={field.type}
+                        onChange={(e) =>
+                          update(
+                            "userDetailFields",
+                            form.userDetailFields.map((f, i) =>
+                              i === idx ? { ...f, type: e.target.value } : f
+                            )
+                          )
+                        }
+                        className="text-xs border rounded-lg px-2 py-1.5 bg-white"
+                      >
+                        <option value="text">Text</option>
+                        <option value="email">Email</option>
+                        <option value="phone">Phone</option>
+                        <option value="select">Dropdown</option>
+                        <option value="radio">Radio</option>
+                      </select>
+                      <label className="flex items-center gap-1 text-xs text-gray-500 cursor-pointer shrink-0">
+                        <input
+                          type="checkbox"
+                          checked={field.required}
+                          onChange={(e) =>
+                            update(
+                              "userDetailFields",
+                              form.userDetailFields.map((f, i) =>
+                                i === idx ? { ...f, required: e.target.checked } : f
+                              )
+                            )
+                          }
+                          className="rounded"
+                        />
+                        Required
+                      </label>
+                      <button
+                        onClick={() =>
+                          update(
+                            "userDetailFields",
+                            form.userDetailFields.filter((_, i) => i !== idx)
+                          )
+                        }
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+
+                    {(field.type === "select" || field.type === "radio") && (
+                      <div className="space-y-1">
+                        <p className="text-[10px] text-gray-500 font-medium">Options (comma-separated)</p>
+                        <Input
+                          value={(field.options || []).join(", ")}
+                          onChange={(e) =>
+                            update(
+                              "userDetailFields",
+                              form.userDetailFields.map((f, i) =>
+                                i === idx
+                                  ? {
+                                      ...f,
+                                      options: e.target.value
+                                        .split(",")
+                                        .map((o) => o.trim())
+                                        .filter(Boolean),
+                                    }
+                                  : f
+                              )
+                            )
+                          }
+                          placeholder="Yes, No, Maybe"
+                          className="h-7 text-xs"
+                        />
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    update("userDetailFields", [
+                      ...form.userDetailFields,
+                      {
+                        id: `field_${Date.now()}`,
+                        label: "Custom Question",
+                        type: "text",
+                        required: false,
+                      },
+                    ])
+                  }
+                  className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-dashed border-indigo-300 text-indigo-600 hover:bg-indigo-50 text-xs font-semibold transition-all"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add Field
+                </button>
+              </CardContent>
+            )}
           </Card>
 
           {/* 5. Telegram Integration */}

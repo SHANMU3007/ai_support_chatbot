@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "project-overview": {
+      "source": "lobehub/lobehub",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/project-overview/SKILL.md",
+      "computedHash": "51df87ef4b8a9c597906d7d028c509e5babcdc4fbd66b0bb92fc10943d1320ee"
+    }
+  }
+}

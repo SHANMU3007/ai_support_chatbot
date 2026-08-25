@@ -406,16 +406,22 @@ export function TicketResolutionTable({ initialTickets, isAdmin = false }: Props
                 <textarea
                   rows={3}
                   value={clientFeedbackText}
-                  onChange={(e) => setClientFeedbackText(e.target.value)}
+                  onChange={(e) => !isAdmin && setClientFeedbackText(e.target.value)}
+                  readOnly={isAdmin}
                   placeholder={
                     isAdmin
                       ? "Client has not appended notes yet..."
                       : "Add your client feedback (e.g. 'Bot misquoted refund window from 14 days to 30 days. Please update prompt / custom rule')..."
                   }
-                  className="w-full p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-slate-400"
+                  className={`w-full p-3 rounded-xl border text-xs focus:outline-none placeholder:text-slate-400 ${
+                    isAdmin
+                      ? "bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 cursor-not-allowed"
+                      : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                  }`}
                 />
 
-                {/* Client Actions */}
+                {/* Client Actions — hidden for admin (admin uses Tier 3 controls only) */}
+                {!isAdmin && (
                 <div className="flex flex-wrap items-center gap-2 pt-1">
                   <button
                     onClick={() =>
@@ -457,6 +463,7 @@ export function TicketResolutionTable({ initialTickets, isAdmin = false }: Props
                     Directly Resolve (Client Fix)
                   </button>
                 </div>
+                )}
               </div>
 
               {/* TIER 3: Platform Admin Rectification */}
@@ -467,7 +474,7 @@ export function TicketResolutionTable({ initialTickets, isAdmin = false }: Props
                       <ShieldCheck className="h-3.5 w-3.5" />
                     </div>
                     <h3 className="font-bold text-xs text-white uppercase tracking-wider">
-                      Tier 3 • Platform Admin Rectification
+                      {isAdmin ? "Tier 3 • Platform Admin Rectification" : "Platform Support Resolution"}
                     </h3>
                   </div>
                   {selectedTicket.resolvedAt && (
@@ -480,7 +487,7 @@ export function TicketResolutionTable({ initialTickets, isAdmin = false }: Props
                 <p className="text-[11px] text-slate-400">
                   {isAdmin
                     ? "Enter system prompt adjustments, knowledge updates, or engineering fixes. This resolution note will be broadcasted to the client and the visitor."
-                    : "Platform engineering resolution fix and response."}
+                    : "Awaiting our support team's resolution. You will be notified once reviewed."}
                 </p>
 
                 <textarea

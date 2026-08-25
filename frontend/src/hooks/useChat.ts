@@ -13,9 +13,10 @@ export interface ChatMessage {
 interface UseChatOptions {
   botId: string;
   language?: string;
+  userDetails?: Record<string, string>;
 }
 
-export function useChat({ botId, language = "en" }: UseChatOptions) {
+export function useChat({ botId, language = "en", userDetails }: UseChatOptions) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -59,6 +60,7 @@ export function useChat({ botId, language = "en" }: UseChatOptions) {
             botId,
             sessionId: sessionId || `${visitorIdRef.current}:${Date.now()}`,
             language,
+            userDetails,
             history: messages.slice(-5).map((m) => ({
               role: m.role,
               content: m.content,

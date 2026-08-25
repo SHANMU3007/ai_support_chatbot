@@ -92,6 +92,10 @@ export default async function PublicChatPage({ params, searchParams }: Props) {
           welcomeMessage={chatbot.welcomeMessage || "Hello! How can I help you today?"}
           primaryColor={chatbot.primaryColor || "#4f46e5"}
           language={chatbot.language || "en"}
+          whiteLabelEnabled={(chatbot as any).whiteLabelEnabled ?? false}
+          whiteLabelBrand={(chatbot as any).whiteLabelBrand ?? null}
+          requireUserDetails={(chatbot as any).requireUserDetails ?? false}
+          userDetailFields={(chatbot as any).userDetailFields ?? []}
         />
       </div>
     </div>
