@@ -35,6 +35,7 @@ interface RawTextRecord {
   charCount: number;
   wordCount: number;
   sourceType: "PDF" | "DOCX" | "URL" | "FAQ" | "TEXT";
+  crawlerUsed?: string;
   extractedAt: string;
   updatedAt: string;
   document: {
@@ -148,14 +149,27 @@ export default function RawTextsAdminPage() {
     }
   };
 
-  const getSourceTypeBadge = (type: string) => {
+  const getSourceTypeBadge = (type: string, crawler?: string) => {
     switch (type) {
       case "PDF":
         return <Badge className="bg-red-50 text-red-700 border-red-200">PDF</Badge>;
       case "DOCX":
         return <Badge className="bg-blue-50 text-blue-700 border-blue-200">DOCX</Badge>;
       case "URL":
-        return <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200">URL Crawl</Badge>;
+        return (
+          <div className="flex flex-col gap-1">
+            <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200">URL Crawl</Badge>
+            {crawler && (
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 w-fit">
+                {crawler === "crawlee_playwright"
+                  ? "Crawlee + Playwright"
+                  : crawler === "crawl4ai"
+                  ? "Crawl4AI"
+                  : "Static (httpx)"}
+              </span>
+            )}
+          </div>
+        );
       case "FAQ":
         return <Badge className="bg-amber-50 text-amber-700 border-amber-200">FAQ Pairs</Badge>;
       default:
@@ -356,7 +370,7 @@ export default function RawTextsAdminPage() {
                       </div>
                     </td>
 
-                    <td className="py-3.5 px-4">{getSourceTypeBadge(record.sourceType)}</td>
+                    <td className="py-3.5 px-4">{getSourceTypeBadge(record.sourceType, record.crawlerUsed)}</td>
 
                     <td className="py-3.5 px-4">
                       <div>

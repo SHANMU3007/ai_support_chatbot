@@ -10,6 +10,7 @@ from app.config import settings
 from app.models.document import FAQPair, IngestFAQRequest, IngestURLRequest
 from app.services.document_processor import DocumentProcessor
 from app.services.url_scraper import URLScraper
+from app.services.crawler_orchestrator import CrawlerOrchestrator
 from app.services.embedding_service import EmbeddingService
 from app.services.chroma_service import ChromaService
 
@@ -18,6 +19,7 @@ router = APIRouter()
 
 doc_processor = DocumentProcessor()
 url_scraper = URLScraper()
+crawler_orchestrator = CrawlerOrchestrator()
 embedding_service = EmbeddingService()
 chroma_service = ChromaService()
 
@@ -107,7 +109,7 @@ async def delete_document(chatbot_id: str, document_id: str):
 import uuid
 from app.utils.text_splitter import splitter
 
-async def _save_raw_text(document_id: str, chatbot_id: str, raw_text: str, source_type: str = "TEXT") -> None:
+async def _save_raw_text(document_id: str, chatbot_id: str, raw_text: str, source_type: str = "TEXT", crawler_used: str | None = None) -> None:
     """Save raw extracted text into RawExtractedText table and update Document content in Postgres."""
     if not raw_text:
         return
@@ -129,13 +131,14 @@ async def _save_raw_text(document_id: str, chatbot_id: str, raw_text: str, sourc
                 await conn.execute(
                     sa.text(
                         '''
-                        INSERT INTO "RawExtractedText" (id, "documentId", "chatbotId", "rawText", "charCount", "wordCount", "sourceType", "extractedAt", "updatedAt")
-                        VALUES (:id, :document_id, :chatbot_id, :raw_text, :char_count, :word_count, CAST(:source_type AS "DocType"), now(), now())
+                        INSERT INTO "RawExtractedText" (id, "documentId", "chatbotId", "rawText", "charCount", "wordCount", "sourceType", "crawlerUsed", "extractedAt", "updatedAt")
+                        VALUES (:id, :document_id, :chatbot_id, :raw_text, :char_count, :word_count, CAST(:source_type AS "DocType"), :crawler_used, now(), now())
                         ON CONFLICT ("documentId") DO UPDATE
                         SET "rawText" = EXCLUDED."rawText",
                             "charCount" = EXCLUDED."charCount",
                             "wordCount" = EXCLUDED."wordCount",
                             "sourceType" = EXCLUDED."sourceType",
+                            "crawlerUsed" = EXCLUDED."crawlerUsed",
                             "updatedAt" = now()
                         '''
                     ),
@@ -147,9 +150,10 @@ async def _save_raw_text(document_id: str, chatbot_id: str, raw_text: str, sourc
                         "char_count": char_count,
                         "word_count": word_count,
                         "source_type": source_type,
+                        "crawler_used": crawler_used,
                     },
                 )
-            logger.info("Saved RawExtractedText for document %s (%d chars)", document_id, char_count)
+            logger.info("Saved RawExtractedText for document %s (%d chars, crawler=%s)", document_id, char_count, crawler_used)
             return
         except Exception as exc:
             if attempt < 2:
@@ -214,20 +218,19 @@ async def _scrape_and_embed(
 ):
     await _update_status(document_id, "PROCESSING")
     try:
-        logger.info("Starting crawl: %s (max_pages=%d)", url, max_pages)
+        logger.info("Starting crawler orchestrator for %s (max_pages=%d)", url, max_pages)
 
-        # Cap total crawl time at 5 minutes — allows for 15s timeouts + retries per page
+        # Cap total crawl time at 5 minutes
         try:
-            combined_text, pages_crawled = await asyncio.wait_for(
-                url_scraper.crawl(url, max_pages=max_pages),
+            combined_text, pages_crawled, crawler_used = await asyncio.wait_for(
+                crawler_orchestrator.crawl(url, max_pages=max_pages),
                 timeout=300.0,
             )
         except asyncio.TimeoutError:
             logger.warning("Crawl timed out after 300s for %s — proceeding with partial data", url)
-            # Re-try with 10 pages max if the full crawl timed out
             try:
-                combined_text, pages_crawled = await asyncio.wait_for(
-                    url_scraper.crawl(url, max_pages=10),
+                combined_text, pages_crawled, crawler_used = await asyncio.wait_for(
+                    crawler_orchestrator.crawl(url, max_pages=10),
                     timeout=120.0,
                 )
                 logger.info("Partial crawl succeeded: %d pages from %s", pages_crawled, url)
@@ -241,7 +244,7 @@ async def _scrape_and_embed(
             await _update_status(document_id, "FAILED")
             return
 
-        await _save_raw_text(document_id=document_id, chatbot_id=chatbot_id, raw_text=combined_text, source_type="URL")
+        await _save_raw_text(document_id=document_id, chatbot_id=chatbot_id, raw_text=combined_text, source_type="URL", crawler_used=crawler_used)
 
         chunks = splitter.split(combined_text)
 
@@ -258,8 +261,8 @@ async def _scrape_and_embed(
             embeddings=embeddings,
         )
         logger.info(
-            "Ingested URL %s — pages: %d, chunks: %d",
-            url, pages_crawled, len(chunks),
+            "Ingested URL %s via %s — pages: %d, chunks: %d",
+            url, crawler_used, pages_crawled, len(chunks),
         )
         await _update_status(document_id, "DONE", len(chunks))
     except Exception:

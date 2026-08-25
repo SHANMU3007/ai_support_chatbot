@@ -132,6 +132,7 @@ model RawExtractedText {
   charCount    Int       @default(0)
   wordCount    Int       @default(0)
   sourceType   DocType   @default(TEXT)
+  crawlerUsed  String?   // "static" | "playwright" | "crawl4ai" — null for non-URL sources
   extractedAt  DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
