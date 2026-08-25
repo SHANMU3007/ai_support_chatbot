@@ -175,7 +175,7 @@ export function useChat({ botId, language = "en", userDetails }: UseChatOptions)
         setIsLoading(false);
       }
     },
-    [botId, isLoading, language, sessionId, messages]
+    [botId, isLoading, language, sessionId, messages, userDetails]
   );
 
   const clearChat = useCallback(() => {

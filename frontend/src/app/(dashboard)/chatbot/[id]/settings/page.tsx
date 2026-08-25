@@ -582,7 +582,7 @@ export default function ChatbotSettingsPage({ params }: Props) {
                   <div>
                     <CardTitle className="text-lg">White-Label Branding</CardTitle>
                     <CardDescription>
-                      Hide "Powered by Conciergo" — your clients see only your brand
+                      Hide &quot;Powered by Conciergo&quot; — your clients see only your brand
                     </CardDescription>
                   </div>
                 </div>

@@ -306,7 +306,7 @@ export default function CreateChatbotPage() {
                     <div>
                       <p className="font-bold text-sm text-slate-900">White-Label Mode</p>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        Hide "Powered by Conciergo" — your clients see only your brand.
+                        Hide &quot;Powered by Conciergo&quot; — your clients see only your brand.
                         This is a <span className="font-semibold text-indigo-600">paid add-on</span> and
                         will add ₹499/mo to your plan.
                       </p>
