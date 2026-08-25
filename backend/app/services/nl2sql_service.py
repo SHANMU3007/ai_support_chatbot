@@ -108,17 +108,16 @@ Question : {question}
 user_id  : {user_id}
 
 Rules:
-1. SELECT only – no INSERT / UPDATE / DELETE / DDL.
-2. Always restrict to the given user_id through the ownership chain shown in the schema.
-   Embed the user_id as a single-quoted string literal directly in the SQL (e.g. WHERE "userId" = 'abc123').
-   Do NOT use bind parameters like $1, %s, :user_id, or ? placeholders.
-3. Always assign a short alias to every table (e.g. "User" u, "Chatbot" cb) and
-   qualify EVERY column reference with its alias (e.g. u.id, cb."userId", m."createdAt").
-   Never reference a column without a table alias prefix.
-4. Use quoted identifiers exactly as shown (e.g. "ChatSession", "createdAt").
-5. Enum literals must be UPPERCASE exactly as defined (e.g. 'USER', 'ASSISTANT', 'DONE').
-6. Group OR conditions in parentheses when mixed with AND.
-7. Output ONLY the raw SQL query – no explanation, no markdown, no code fences."""
+1. SELECT only – no INSERT / UPDATE / DELETE / DDL / CREATE / DROP.
+2. Filter results using ownership chain:
+   Join "Chatbot" and filter by cb."userId" = '{user_id}' when looking up workspace-owned chatbots, sessions, or messages.
+3. For date/time filters:
+   - "this week": use "createdAt" >= date_trunc('week', NOW())
+   - "last 30 days" / "30 days": use "createdAt" >= NOW() - INTERVAL '30 days'
+4. Always assign a short alias to every table (e.g. "User" u, "Chatbot" cb, "ChatSession" cs, "Message" m) and
+   qualify EVERY column reference with its alias (e.g. u.id, cb."userId", cs."createdAt").
+5. Use quoted identifiers exactly as shown in schema (e.g. "ChatSession", "createdAt", "Chatbot").
+6. Output ONLY the raw SQL query starting with SELECT or WITH – no introductory text, no comments, no code fences."""
 
 
 class NL2SQLService:
@@ -135,8 +134,10 @@ class NL2SQLService:
             try:
                 cached = await redis.get(cache_key)
                 if cached:
-                    logger.info("NL2SQL cache hit for key %s", cache_key)
-                    return json.loads(cached)
+                    parsed = json.loads(cached)
+                    if isinstance(parsed, dict) and not parsed.get("error"):
+                        logger.info("NL2SQL cache hit for key %s", cache_key)
+                        return parsed
             except Exception:
                 pass  # Redis hiccup – just proceed without cache
 

@@ -35,15 +35,18 @@ export async function GET() {
     results.fastapi = { status: "offline", detail: err.message };
   }
 
-  // 3. ChromaDB
-  const chromaHost = process.env.CHROMA_HOST || "localhost";
-  const chromaPort = process.env.CHROMA_PORT || "8001";
-  const chromaUrl = `http://${chromaHost}:${chromaPort}/api/v1/heartbeat`;
+  // 3. ChromaDB Vector Store (Probed via FastAPI AI Engine)
   const chromaStart = Date.now();
   try {
-    const res = await fetch(chromaUrl, { cache: "no-store" });
+    const detailedUrl = getFastApiUrl("/health/detailed");
+    const res = await fetch(detailedUrl, { cache: "no-store" });
     if (res.ok) {
-      results.chromadb = { status: "online", latencyMs: Date.now() - chromaStart };
+      const data = await res.json();
+      if (data.chromadb === "ok") {
+        results.chromadb = { status: "online", latencyMs: Date.now() - chromaStart };
+      } else {
+        results.chromadb = { status: "offline", detail: String(data.chromadb || "ChromaDB degraded") };
+      }
     } else {
       results.chromadb = { status: "offline", detail: `HTTP ${res.status}` };
     }
@@ -52,17 +55,21 @@ export async function GET() {
   }
 
   // 4. n8n Automation Engine
-  const n8nUrl = process.env.N8N_WEBHOOK_URL || "http://localhost:5678";
-  const n8nStart = Date.now();
-  try {
-    const res = await fetch(`${n8nUrl}/healthz`, { cache: "no-store" });
-    if (res.ok) {
-      results.n8n = { status: "online", latencyMs: Date.now() - n8nStart };
-    } else {
-      results.n8n = { status: "offline", detail: `HTTP ${res.status}` };
+  if (process.env.N8N_WEBHOOK_URL) {
+    const n8nUrl = process.env.N8N_WEBHOOK_URL;
+    const n8nStart = Date.now();
+    try {
+      const res = await fetch(`${n8nUrl}/healthz`, { cache: "no-store" });
+      if (res.ok) {
+        results.n8n = { status: "online", latencyMs: Date.now() - n8nStart };
+      } else {
+        results.n8n = { status: "offline", detail: `HTTP ${res.status}` };
+      }
+    } catch (err: any) {
+      results.n8n = { status: "offline", detail: err.message };
     }
-  } catch (err: any) {
-    results.n8n = { status: "offline", detail: err.message };
+  } else {
+    results.n8n = { status: "online", latencyMs: 0, detail: "Optional (Not Configured)" };
   }
 
   return NextResponse.json({
