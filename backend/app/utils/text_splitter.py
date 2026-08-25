@@ -38,3 +38,7 @@ class TextSplitter:
             start = end - overlap_chars
 
         return chunks
+
+
+# Default singleton instance for convenience
+splitter = TextSplitter()
