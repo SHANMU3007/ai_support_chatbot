@@ -5,13 +5,14 @@ import EmailProvider from "next-auth/providers/email";
 import { prisma } from "@/lib/prisma";
 
 export function isUserAdmin(email?: string | null, role?: string | null): boolean {
-  if (role === "ADMIN") return true;
   if (!email) return false;
+  const cleanEmail = email.toLowerCase().trim();
   const adminEmails = (process.env.ADMIN_EMAILS || "shanmugapatelkani@gmail.com")
     .split(",")
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
-  return adminEmails.includes(email.toLowerCase().trim());
+  if (adminEmails.includes(cleanEmail)) return true;
+  return role === "ADMIN";
 }
 
 export const authOptions: NextAuthOptions = {
@@ -67,15 +68,19 @@ export const authOptions: NextAuthOptions = {
       if (email) {
         try {
           const cleanEmail = email.toLowerCase().trim();
+          const adminEmails = (process.env.ADMIN_EMAILS || "shanmugapatelkani@gmail.com")
+            .split(",")
+            .map((e) => e.trim().toLowerCase())
+            .filter(Boolean);
+          const isConfiguredAdmin = adminEmails.includes(cleanEmail);
+
           let dbUser = await prisma.user.findUnique({
             where: { email: cleanEmail },
             select: { id: true, email: true, role: true, plan: true },
           });
 
-          const isAdmin = isUserAdmin(cleanEmail, dbUser?.role);
-
           if (dbUser) {
-            if (isAdmin && (dbUser.role !== "ADMIN" || dbUser.plan !== "ENTERPRISE")) {
+            if (isConfiguredAdmin && (dbUser.role !== "ADMIN" || dbUser.plan !== "ENTERPRISE")) {
               dbUser = await prisma.user.update({
                 where: { id: dbUser.id },
                 data: { role: "ADMIN", plan: "ENTERPRISE" },
@@ -86,9 +91,12 @@ export const authOptions: NextAuthOptions = {
             token.email = dbUser.email;
             token.role = dbUser.role;
             token.plan = dbUser.plan;
-          } else if (isAdmin) {
+          } else if (isConfiguredAdmin) {
             token.role = "ADMIN";
             token.plan = "ENTERPRISE";
+          } else {
+            token.role = "WORKSPACE";
+            token.plan = "FREE";
           }
         } catch (e) {
           console.error("JWT user lookup error:", e);
@@ -107,15 +115,19 @@ export const authOptions: NextAuthOptions = {
       if (session?.user && session.user.email) {
         try {
           const email = session.user.email.toLowerCase().trim();
+          const adminEmails = (process.env.ADMIN_EMAILS || "shanmugapatelkani@gmail.com")
+            .split(",")
+            .map((e) => e.trim().toLowerCase())
+            .filter(Boolean);
+          const isConfiguredAdmin = adminEmails.includes(email);
+
           let dbUser = await prisma.user.findUnique({
             where: { email },
             select: { id: true, plan: true, role: true },
           });
 
-          const isAdmin = isUserAdmin(email, dbUser?.role || (token?.role as string));
-
           if (dbUser) {
-            if (isAdmin && (dbUser.role !== "ADMIN" || dbUser.plan !== "ENTERPRISE")) {
+            if (isConfiguredAdmin && (dbUser.role !== "ADMIN" || dbUser.plan !== "ENTERPRISE")) {
               dbUser = await prisma.user.update({
                 where: { id: dbUser.id },
                 data: { role: "ADMIN", plan: "ENTERPRISE" },
@@ -129,8 +141,8 @@ export const authOptions: NextAuthOptions = {
           } else {
             const fallbackId = (token?.id as string) || (token?.sub as string) || (session.user as any).id;
             (session.user as any).id = fallbackId;
-            (session.user as any).plan = isAdmin ? "ENTERPRISE" : (token?.plan as string) || "FREE";
-            (session.user as any).role = isAdmin ? "ADMIN" : (token?.role as string) || "WORKSPACE";
+            (session.user as any).plan = isConfiguredAdmin ? "ENTERPRISE" : (token?.plan as string) || "FREE";
+            (session.user as any).role = isConfiguredAdmin ? "ADMIN" : (token?.role as string) || "WORKSPACE";
           }
         } catch (err) {
           console.error("Error resolving session user:", err);
