@@ -62,9 +62,12 @@ class CrawleePlaywrightScraper:
             crawled_urls.add(url)
             page = context.page
 
-            # Wait for content to stabilize
+            # Wait for initial DOM load
             await page.wait_for_load_state("domcontentloaded", timeout=15000)
-            await page.wait_for_timeout(1000)
+            await page.wait_for_timeout(1500)
+
+            # Auto-scroll page to trigger IntersectionObserver, Framer Motion, GSAP scroll animations
+            await self._scroll_page(page)
 
             # Click dynamic tab elements if present
             await self._click_dynamic_elements(page)
@@ -102,7 +105,17 @@ class CrawleePlaywrightScraper:
         texts: List[str] = []
 
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
+            try:
+                browser = await p.chromium.launch(
+                    headless=True,
+                    args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
+                )
+            except Exception as launch_exc:
+                logger.info("Default Playwright launch failed (%s) — trying channel='msedge'", launch_exc)
+                try:
+                    browser = await p.chromium.launch(headless=True, channel="msedge")
+                except Exception:
+                    browser = await p.chromium.launch(headless=True, channel="chrome")
             context = await browser.new_context(
                 viewport={"width": 1440, "height": 900},
                 user_agent=(
@@ -121,11 +134,15 @@ class CrawleePlaywrightScraper:
 
                 try:
                     logger.info("Playwright crawling %s (%d/%d)", current_url, len(texts) + 1, max_pages)
-                    resp = await page.goto(current_url, wait_until="domcontentloaded", timeout=20000)
+                    resp = await page.goto(current_url, wait_until="domcontentloaded", timeout=25000)
                     if not resp or resp.status >= 400:
                         continue
 
-                    await page.wait_for_timeout(1200)
+                    await page.wait_for_timeout(1500)
+
+                    # Smooth scroll down page to trigger scroll animations, IntersectionObserver, and lazy loading
+                    await self._scroll_page(page)
+
                     await self._click_dynamic_elements(page)
 
                     # Extract HTML content
@@ -161,6 +178,21 @@ class CrawleePlaywrightScraper:
         combined = "\n\n".join(texts)
         return combined, len(texts)
 
+    async def _scroll_page(self, page: any) -> None:
+        """Smoothly scroll viewport down to trigger IntersectionObserver, Framer Motion, and scroll animations."""
+        try:
+            for _ in range(8):
+                await page.evaluate("window.scrollBy(0, 750)")
+                await page.wait_for_timeout(350)
+            # Scroll to very bottom to guarantee last section renders
+            await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+            await page.wait_for_timeout(1000)
+            # Scroll back to top
+            await page.evaluate("window.scrollTo(0, 0)")
+            await page.wait_for_timeout(300)
+        except Exception as exc:
+            logger.debug("Scroll execution error: %s", exc)
+
     async def _click_dynamic_elements(self, page: any) -> None:
         """Click interactive tabs, accordions, and buttons to reveal hidden dynamic text."""
         tab_selectors = [
@@ -168,6 +200,7 @@ class CrawleePlaywrightScraper:
             '.tab-link, .tab-btn',
             '.accordion-header, .accordion-toggle',
             '.collapse-toggle',
+            '.category-btn, .filter-btn',
         ]
         for sel in tab_selectors:
             try:
@@ -181,9 +214,28 @@ class CrawleePlaywrightScraper:
 
     @staticmethod
     def _extract_clean_text(soup: BeautifulSoup) -> str:
-        """Extract clean text stripping boilerplate scripts, navs, and footers."""
-        for tag in soup(["script", "style", "nav", "footer", "header", "aside", "noscript", "iframe", "svg"]):
+        """Extract clean text stripping executable scripts/styles while preserving structural headers/footers/nav."""
+        # Extract title and meta description if present
+        meta_parts = []
+        title_tag = soup.find("title")
+        if title_tag and title_tag.get_text(strip=True):
+            meta_parts.append(f"Title: {title_tag.get_text(strip=True)}")
+        
+        meta_desc = soup.find("meta", attrs={"name": "description"})
+        if meta_desc and meta_desc.get("content"):
+            meta_parts.append(f"Description: {meta_desc['content']}")
+
+        # Remove non-textual code tags only (keep nav, header, footer for SPAs/portfolios)
+        for tag in soup(["script", "style", "noscript", "iframe", "svg", "style"]):
             tag.decompose()
+
         raw = soup.get_text(separator="\n", strip=True)
         lines = [line.strip() for line in raw.splitlines() if line.strip()]
-        return "\n".join(lines)
+        body_text = "\n".join(lines)
+
+        if meta_parts:
+            header_block = "=== META DATA ===\n" + "\n".join(meta_parts) + "\n\n=== MAIN CONTENT ==="
+            return f"{header_block}\n{body_text}"
+
+        return body_text
+
