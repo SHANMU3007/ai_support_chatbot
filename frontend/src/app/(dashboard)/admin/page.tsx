@@ -1,13 +1,15 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions, isUserAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Users, AlertTriangle, Activity, ArrowRight, ShieldCheck, MessageSquare, Bot, LifeBuoy, FileText } from "lucide-react";
 
 export default async function AdminPage() {
   const session = await getServerSession(authOptions);
-  if (session?.user.role !== "ADMIN") redirect("/dashboard");
+  if (!isUserAdmin(session?.user?.email, session?.user?.role)) {
+    redirect("/dashboard");
+  }
 
   const [workspaces, chatbotsCount, documentsCount, sessions, negative, recentWorkspaces] = await Promise.all([
     prisma.user.count({ where: { role: "WORKSPACE" } }),

@@ -4,6 +4,16 @@ import GoogleProvider from "next-auth/providers/google";
 import EmailProvider from "next-auth/providers/email";
 import { prisma } from "@/lib/prisma";
 
+export function isUserAdmin(email?: string | null, role?: string | null): boolean {
+  if (role === "ADMIN") return true;
+  if (!email) return false;
+  const adminEmails = (process.env.ADMIN_EMAILS || "shanmugapatelkani@gmail.com")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  return adminEmails.includes(email.toLowerCase().trim());
+}
+
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET || "p5/SUyOnvA0fIf1hjEEVAUlR8daxBcrXOH+4f17i5lw=",
   debug: false,
@@ -46,14 +56,28 @@ export const authOptions: NextAuthOptions = {
       const email = user?.email || token?.email;
       if (email) {
         try {
-          const dbUser = await prisma.user.findUnique({
-            where: { email: email.toLowerCase() },
+          const cleanEmail = email.toLowerCase().trim();
+          let dbUser = await prisma.user.findUnique({
+            where: { email: cleanEmail },
             select: { id: true, role: true, plan: true },
           });
+
+          const isAdmin = isUserAdmin(cleanEmail, dbUser?.role);
+
           if (dbUser) {
+            if (isAdmin && (dbUser.role !== "ADMIN" || dbUser.plan !== "ENTERPRISE")) {
+              dbUser = await prisma.user.update({
+                where: { id: dbUser.id },
+                data: { role: "ADMIN", plan: "ENTERPRISE" },
+                select: { id: true, role: true, plan: true },
+              });
+            }
             token.id = dbUser.id;
             token.role = dbUser.role;
             token.plan = dbUser.plan;
+          } else if (isAdmin) {
+            token.role = "ADMIN";
+            token.plan = "ENTERPRISE";
           }
         } catch (e) {
           console.error("JWT user lookup error:", e);
@@ -66,21 +90,16 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session?.user && session.user.email) {
         try {
-          const email = session.user.email.toLowerCase();
-          const adminEmails = (process.env.ADMIN_EMAILS || "shanmugapatelkani@gmail.com")
-            .split(",")
-            .map((e) => e.trim().toLowerCase())
-            .filter(Boolean);
-
+          const email = session.user.email.toLowerCase().trim();
           let dbUser = await prisma.user.findUnique({
             where: { email },
             select: { id: true, plan: true, role: true },
           });
 
-          const isConfiguredAdmin = Boolean(adminEmails.includes(email));
+          const isAdmin = isUserAdmin(email, dbUser?.role || (token?.role as string));
 
           if (dbUser) {
-            if (isConfiguredAdmin && (dbUser.role !== "ADMIN" || dbUser.plan !== "ENTERPRISE")) {
+            if (isAdmin && (dbUser.role !== "ADMIN" || dbUser.plan !== "ENTERPRISE")) {
               dbUser = await prisma.user.update({
                 where: { id: dbUser.id },
                 data: { role: "ADMIN", plan: "ENTERPRISE" },
@@ -94,8 +113,8 @@ export const authOptions: NextAuthOptions = {
           } else {
             const fallbackId = (token?.id as string) || (token?.sub as string) || (session.user as any).id;
             (session.user as any).id = fallbackId;
-            (session.user as any).plan = (token?.plan as string) || "FREE";
-            (session.user as any).role = (token?.role as string) || (isConfiguredAdmin ? "ADMIN" : "WORKSPACE");
+            (session.user as any).plan = isAdmin ? "ENTERPRISE" : (token?.plan as string) || "FREE";
+            (session.user as any).role = isAdmin ? "ADMIN" : (token?.role as string) || "WORKSPACE";
           }
         } catch (err) {
           console.error("Error resolving session user:", err);

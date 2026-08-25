@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions, isUserAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 interface Props {
@@ -9,7 +9,7 @@ interface Props {
 
 export async function GET(_req: NextRequest, { params }: Props) {
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || !isUserAdmin(session.user.email, session.user.role)) {
     return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
   }
 
