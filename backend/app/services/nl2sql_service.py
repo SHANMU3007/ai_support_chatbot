@@ -120,6 +120,50 @@ Rules:
 6. Output ONLY the raw SQL query starting with SELECT or WITH – no introductory text, no comments, no code fences."""
 
 
+def _get_preset_sql(question: str, user_id: str) -> str | None:
+    q = question.strip().lower().rstrip("?")
+    safe_id = user_id.replace("'", "''")
+
+    if "average messages per session" in q:
+        return f"""SELECT COALESCE(ROUND(AVG(m_count)::numeric, 2), 0) AS "avg_messages_per_session"
+FROM (
+  SELECT cs.id, COUNT(m.id) AS m_count
+  FROM "ChatSession" cs
+  JOIN "Chatbot" cb ON cs."chatbotId" = cb.id
+  LEFT JOIN "Message" m ON m."sessionId" = cs.id
+  WHERE cb."userId" = '{safe_id}' OR '{safe_id}' IN (SELECT id FROM "User" WHERE role = 'ADMIN')
+  GROUP BY cs.id
+) sub"""
+
+    if "how many chats did i get this week" in q:
+        return f"""SELECT COUNT(cs.id) AS "total_chats_this_week"
+FROM "ChatSession" cs
+JOIN "Chatbot" cb ON cs."chatbotId" = cb.id
+WHERE (cb."userId" = '{safe_id}' OR '{safe_id}' IN (SELECT id FROM "User" WHERE role = 'ADMIN'))
+  AND cs."createdAt" >= date_trunc('week', NOW())"""
+
+    if "which chatbot has the most conversations" in q:
+        return f"""SELECT cb.name AS "chatbot_name", COUNT(cs.id) AS "total_conversations"
+FROM "Chatbot" cb
+LEFT JOIN "ChatSession" cs ON cs."chatbotId" = cb.id
+WHERE cb."userId" = '{safe_id}' OR '{safe_id}' IN (SELECT id FROM "User" WHERE role = 'ADMIN')
+GROUP BY cb.id, cb.name
+ORDER BY total_conversations DESC
+LIMIT 5"""
+
+    if "stats for the last 30 days" in q or "last 30 days" in q:
+        return f"""SELECT 
+  COUNT(DISTINCT cs.id) AS "total_sessions_last_30_days",
+  COUNT(m.id) AS "total_messages",
+  COUNT(DISTINCT cb.id) AS "active_chatbots"
+FROM "Chatbot" cb
+LEFT JOIN "ChatSession" cs ON cs."chatbotId" = cb.id AND cs."createdAt" >= NOW() - INTERVAL '30 days'
+LEFT JOIN "Message" m ON m."sessionId" = cs.id
+WHERE cb."userId" = '{safe_id}' OR '{safe_id}' IN (SELECT id FROM "User" WHERE role = 'ADMIN')"""
+
+    return None
+
+
 class NL2SQLService:
     def __init__(self):
         self.client = AsyncGroq(api_key=settings.GROQ_API_KEY)
@@ -141,68 +185,80 @@ class NL2SQLService:
             except Exception:
                 pass  # Redis hiccup – just proceed without cache
 
-        # 1. Generate SQL via Groq
-        prompt = _PROMPT.format(
-            schema=_SCHEMA_HINT, question=question, user_id=user_id
-        )
-        response = None
-        last_error: Exception | None = None
-        for attempt in range(3):
-            try:
-                response = await self.client.chat.completions.create(
-                    model=settings.GROQ_NL2SQL_MODEL,
-                    max_tokens=512,
-                    messages=[{"role": "user", "content": prompt}],
-                )
-                break  # success
-            except Exception as exc:
-                last_error = exc
-                err_msg = str(exc)
-                is_rate_limit = "429" in err_msg or "rate" in err_msg.lower()
-                if is_rate_limit and attempt < 2:
-                    wait = 5 * (attempt + 1)  # 5 s, 10 s
-                    logger.warning("Groq rate limit on attempt %d, retrying in %ds", attempt + 1, wait)
-                    await asyncio.sleep(wait)
-                    continue
-                # Non-rate-limit error or exhausted retries
-                if is_rate_limit:
-                    return {
-                        "error": "AI service rate limit reached – please wait a moment and try again.",
-                        "sql": "", "columns": [], "rows": [], "rowCount": 0,
-                    }
-                logger.exception("Groq call failed")
-                return {
-                    "error": f"AI service error: {err_msg}",
-                    "sql": "", "columns": [], "rows": [], "rowCount": 0,
-                }
-
-        if response is None:
-            return {"error": str(last_error), "sql": "", "columns": [], "rows": [], "rowCount": 0}
-
-        raw_sql = response.choices[0].message.content or ""
-        raw_sql = raw_sql.strip()
-
-        # Remove preamble comments/markdown text and extract SELECT or WITH statement
-        match = re.search(r"\b(SELECT|WITH)\b[\s\S]*", raw_sql, flags=re.IGNORECASE)
-        if match:
-            sql = match.group(0).strip()
-            # Remove trailing markdown code fences if any
-            sql = re.sub(r"```.*$", "", sql, flags=re.DOTALL).strip()
-            sql = sql.rstrip(";")
+        # 1. Preset SQL Check
+        preset_sql = _get_preset_sql(question, user_id)
+        if preset_sql:
+            sql = preset_sql
         else:
-            sql = raw_sql
+            # Generate SQL via Groq
+            prompt = _PROMPT.format(
+                schema=_SCHEMA_HINT, question=question, user_id=user_id
+            )
+            response = None
+            last_error: Exception | None = None
+            models_to_try = [
+                settings.GROQ_NL2SQL_MODEL,
+                "openai/gpt-oss-120b",
+                "openai/gpt-oss-20b",
+            ]
+            for model_name in models_to_try:
+                for attempt in range(2):
+                    try:
+                        response = await self.client.chat.completions.create(
+                            model=model_name,
+                            temperature=0.0,
+                            max_tokens=512,
+                            messages=[{"role": "user", "content": prompt}],
+                        )
+                        break
+                    except Exception as exc:
+                        last_error = exc
+                        err_msg = str(exc)
+                        if "404" in err_msg or "not found" in err_msg.lower():
+                            logger.warning(f"Groq model {model_name} not found, trying fallback...")
+                            break  # Try next model immediately
+                        if "429" in err_msg or "rate" in err_msg.lower():
+                            await asyncio.sleep(2)
+                            continue
+                        logger.warning(f"Groq error with {model_name}: {err_msg}")
+                        break
+                if response is not None:
+                    break
 
-        # Safety: replace any bind-parameter placeholders the model may have
-        # emitted ($1, $2, %s, :user_id, ?) with the literal user_id string.
-        safe_id = user_id.replace("'", "''")  # escape single quotes
-        sql = re.sub(r"\$\d+", f"'{safe_id}'", sql)
-        sql = re.sub(r":user_id\b", f"'{safe_id}'", sql, flags=re.IGNORECASE)
-        sql = re.sub(r"%s", f"'{safe_id}'", sql)
+            if response is None:
+                return {"error": f"AI service error: {last_error}", "sql": "", "columns": [], "rows": [], "rowCount": 0}
+
+            raw_sql = response.choices[0].message.content or ""
+            
+            # Strip markdown fences and leading/trailing whitespace
+            cleaned = re.sub(r"^```[a-z]*\n?", "", raw_sql.strip(), flags=re.IGNORECASE)
+            cleaned = re.sub(r"\n?```$", "", cleaned).strip()
+
+            # Remove preamble comments/markdown text and extract SELECT or WITH statement
+            match = re.search(r"\b(SELECT|WITH)\b[\s\S]*", cleaned, flags=re.IGNORECASE)
+            if match:
+                sql = match.group(0).strip()
+                sql = re.sub(r"```.*$", "", sql, flags=re.DOTALL).strip()
+                sql = sql.rstrip(";")
+            else:
+                sql = cleaned
+
+            # Safety: replace any bind-parameter placeholders
+            safe_id = user_id.replace("'", "''")
+            sql = re.sub(r"\$\d+", f"'{safe_id}'", sql)
+            sql = re.sub(r":user_id\b", f"'{safe_id}'", sql, flags=re.IGNORECASE)
+            sql = re.sub(r"%s", f"'{safe_id}'", sql)
+
+            # Table hallucination auto-corrections
+            sql = re.sub(r'\b"Chat"\b', '"ChatSession"', sql)
+            sql = re.sub(r'\b"Sessions"\b', '"ChatSession"', sql)
+            sql = re.sub(r'\b"Messages"\b', '"Message"', sql)
+            sql = re.sub(r'\b"Chatbots"\b', '"Chatbot"', sql)
+            sql = re.sub(r'\b"Users"\b', '"User"', sql)
 
         # Security check – allow SELECT / WITH queries only, disallow destructive DDL/DML
         disallowed_pattern = r"\b(INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|CREATE|EXEC|GRANT|REVOKE)\b"
-        sql_lower = sql.lower().lstrip()
-        if not (sql_lower.startswith("select") or sql_lower.startswith("with")) or re.search(disallowed_pattern, sql, flags=re.IGNORECASE):
+        if not re.match(r"^(select|with)\b", sql.strip(), flags=re.IGNORECASE) or re.search(disallowed_pattern, sql, flags=re.IGNORECASE):
             return {"error": "Only SELECT queries are allowed.", "sql": sql, "columns": [], "rows": [], "rowCount": 0}
 
         # 2. Execute SQL

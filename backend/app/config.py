@@ -24,7 +24,7 @@ class Settings(BaseSettings):
             )
         return v.strip()
     # Smaller, faster model used only for NL2SQL (higher free-tier token quota)
-    GROQ_NL2SQL_MODEL: str = "openai/gpt-oss-20b"
+    GROQ_NL2SQL_MODEL: str = "openai/gpt-oss-120b"
 
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://chatbot:chatbot_pass@localhost:5432/chatbot_db"

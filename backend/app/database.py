@@ -23,8 +23,10 @@ if "?" in db_url:
 else:
     db_url += "?prepared_statement_cache_size=0"
 
+import uuid
+
 # Always disable prepared statement cache when using Supabase/PgBouncer
-# to prevent "prepared statement does not exist" errors in transaction mode.
+# to prevent "prepared statement does not exist" and duplicate statement errors in transaction mode.
 engine = create_async_engine(
     db_url,
     echo=False,
@@ -33,7 +35,11 @@ engine = create_async_engine(
     max_overflow=5,
     pool_timeout=30,
     pool_recycle=1800,  # recycle connections every 30 min
-    connect_args={"statement_cache_size": 0},
+    connect_args={
+        "statement_cache_size": 0,
+        "prepared_statement_cache_size": 0,
+        "prepared_statement_name_func": lambda: f"__asyncpg_stmt_{uuid.uuid4().hex}__",
+    },
 )
 
 AsyncSessionLocal = async_sessionmaker(
