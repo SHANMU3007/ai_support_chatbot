@@ -31,6 +31,13 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID ?? "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
       allowDangerousEmailAccountLinking: true,
+      authorization: {
+        params: {
+          prompt: "select_account",
+          access_type: "offline",
+          response_type: "code",
+        },
+      },
     }),
     EmailProvider({
       server: {
@@ -53,13 +60,16 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     async jwt({ token, user }) {
-      const email = user?.email || token?.email;
+      if (user && user.email) {
+        token.email = user.email.toLowerCase().trim();
+      }
+      const email = token?.email || user?.email;
       if (email) {
         try {
           const cleanEmail = email.toLowerCase().trim();
           let dbUser = await prisma.user.findUnique({
             where: { email: cleanEmail },
-            select: { id: true, role: true, plan: true },
+            select: { id: true, email: true, role: true, plan: true },
           });
 
           const isAdmin = isUserAdmin(cleanEmail, dbUser?.role);
@@ -69,10 +79,11 @@ export const authOptions: NextAuthOptions = {
               dbUser = await prisma.user.update({
                 where: { id: dbUser.id },
                 data: { role: "ADMIN", plan: "ENTERPRISE" },
-                select: { id: true, role: true, plan: true },
+                select: { id: true, email: true, role: true, plan: true },
               });
             }
             token.id = dbUser.id;
+            token.email = dbUser.email;
             token.role = dbUser.role;
             token.plan = dbUser.plan;
           } else if (isAdmin) {
@@ -84,10 +95,15 @@ export const authOptions: NextAuthOptions = {
         }
       } else if (user) {
         token.id = user.id;
+        token.email = user.email;
       }
       return token;
     },
     async session({ session, token }) {
+      if (token && token.email) {
+        if (!session.user) (session as any).user = {};
+        session.user.email = token.email as string;
+      }
       if (session?.user && session.user.email) {
         try {
           const email = session.user.email.toLowerCase().trim();
