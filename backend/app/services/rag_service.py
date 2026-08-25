@@ -24,47 +24,54 @@ async def _get_postgres_fallback_context(chatbot_id: str, query: str) -> str:
     """Fallback context fetch directly from Postgres Document / RawExtractedText if ChromaDB has no chunks."""
     try:
         async with engine.connect() as conn:
-            # 1. Fetch raw text from RawExtractedText
+            # 1. Fetch raw text with document name from RawExtractedText
             result = await conn.execute(
                 sa.text(
-                    'SELECT "rawText" FROM "RawExtractedText" WHERE "chatbotId" = :cid ORDER BY "extractedAt" DESC'
+                    'SELECT r."rawText", d.name FROM "RawExtractedText" r '
+                    'JOIN "Document" d ON r."documentId" = d.id '
+                    'WHERE r."chatbotId" = :cid ORDER BY r."extractedAt" DESC'
                 ),
                 {"cid": chatbot_id},
             )
-            raw_rows = result.scalars().all()
-            texts = [r for r in raw_rows if r and r.strip()]
+            rows = result.fetchall()
+            doc_entries = [(r[0], r[1]) for r in rows if r[0] and r[0].strip()]
 
-            if not texts:
-                # Try Document table
+            if not doc_entries:
+                # Try Document table directly
                 doc_result = await conn.execute(
                     sa.text(
-                        'SELECT content FROM "Document" WHERE "chatbotId" = :cid AND status = \'DONE\' AND content != \'\' ORDER BY "createdAt" DESC'
+                        'SELECT content, name FROM "Document" WHERE "chatbotId" = :cid AND status = \'DONE\' AND content != \'\' ORDER BY "createdAt" DESC'
                     ),
                     {"cid": chatbot_id},
                 )
-                texts = [r for r in doc_result.scalars().all() if r and r.strip()]
+                doc_rows = doc_result.fetchall()
+                doc_entries = [(r[0], r[1]) for r in doc_rows if r[0] and r[0].strip()]
 
-            if not texts:
+            if not doc_entries:
                 return ""
 
-            # Combine texts and split into chunks
-            all_text = "\n\n".join(texts)
-            all_chunks = splitter.split(all_text)
-            if not all_chunks:
-                return all_text[:8000]
+            # Split each document into chunks tagged with its document name
+            tagged_chunks: List[str] = []
+            for raw_text, doc_name in doc_entries:
+                chunks = splitter.split(raw_text)
+                prefix = f"[Document: {doc_name}]\n" if doc_name else ""
+                for chunk in chunks:
+                    tagged_chunks.append(f"{prefix}{chunk}")
 
-            # Simple keyword relevance scoring
+            if not tagged_chunks:
+                return ""
+
+            # Score chunks based on query keyword matches
             query_words = set(query.lower().split())
             scored_chunks = []
-            for chunk in all_chunks:
+            for chunk in tagged_chunks:
                 chunk_lower = chunk.lower()
                 score = sum(1 for word in query_words if len(word) > 2 and word in chunk_lower)
                 scored_chunks.append((score, chunk))
 
             scored_chunks.sort(key=lambda x: x[0], reverse=True)
-            # Pick top chunks; if top score is 0, pick first 6 chunks
             top_chunks = [c for s, c in scored_chunks[:6]]
-            logger.info("Postgres fallback retrieved %d chunks for chatbot=%s", len(top_chunks), chatbot_id)
+            logger.info("Postgres fallback retrieved %d chunks for chatbot=%s across %d docs", len(top_chunks), chatbot_id, len(doc_entries))
             return "\n\n---\n\n".join(top_chunks)
     except Exception as exc:
         logger.warning("Postgres fallback retrieval failed for chatbot=%s: %s", chatbot_id, exc)
