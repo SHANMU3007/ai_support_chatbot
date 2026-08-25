@@ -52,8 +52,8 @@ class Settings(BaseSettings):
     MAX_TOKENS: int = 1024
     CONTEXT_CHUNKS: int = 8
     # Minimum cosine similarity for a chunk to be included in context.
-    # 0.25 = only genuinely relevant chunks; prevents hallucinations from noise.
-    RAG_MIN_SIMILARITY: float = 0.25
+    # 0.10 ensures broad recall of relevant knowledge chunks.
+    RAG_MIN_SIMILARITY: float = 0.10
 
 
 settings = Settings()

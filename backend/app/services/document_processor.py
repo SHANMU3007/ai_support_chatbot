@@ -36,11 +36,22 @@ def _extract_pdf(content: bytes) -> str:
     doc = fitz.open(stream=content, filetype="pdf")  # type: ignore[call-arg]
     parts: list[str] = []
     for page in doc:
-        parts.append(page.get_text())  # type: ignore[attr-defined]
+        txt = page.get_text()  # type: ignore[attr-defined]
+        if txt:
+            parts.append(txt)
     doc.close()
-    return "\n".join(parts)
+    full_text = "\n".join(parts).strip()
+    if not full_text:
+        raise ValueError(
+            "No readable text found in PDF. The document may be a scanned image or non-text PDF."
+        )
+    return full_text
 
 
 def _extract_docx(content: bytes) -> str:
     d = docx.Document(io.BytesIO(content))
-    return "\n".join(p.text for p in d.paragraphs if p.text.strip())
+    full_text = "\n".join(p.text for p in d.paragraphs if p.text.strip()).strip()
+    if not full_text:
+        raise ValueError("No readable text found in DOCX file.")
+    return full_text
+

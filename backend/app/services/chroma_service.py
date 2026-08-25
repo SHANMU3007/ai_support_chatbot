@@ -148,7 +148,7 @@ class ChromaService:
             )
 
             if not filtered_docs:
-                fallback_docs = [str(d) for d in docs if d][:2]
+                fallback_docs = [str(d) for d in docs if d][:5]
                 logger.info(
                     "Chroma query fallback chatbot=%s using top_docs=%d after strict filter",
                     chatbot_id,

@@ -178,6 +178,11 @@ async def _process_and_embed(
         await _save_raw_text(document_id=document_id, chatbot_id=chatbot_id, raw_text=raw_text, source_type=source_type)
 
         chunks = splitter.split(raw_text)
+        if not chunks:
+            logger.warning("No chunks produced from document %s", filename)
+            await _update_status(document_id, "FAILED")
+            return
+
         embeddings = await embedding_service.embed_chunks(chunks)
         await chroma_service.add_chunks(
             chatbot_id=chatbot_id,
@@ -187,8 +192,8 @@ async def _process_and_embed(
         )
         logger.info("Ingested document %s (%d chunks)", document_id, len(chunks))
         await _update_status(document_id, "DONE", len(chunks))
-    except Exception:
-        logger.exception("Failed to ingest document %s", document_id)
+    except Exception as exc:
+        logger.exception("Failed to ingest document %s: %s", document_id, exc)
         await _update_status(document_id, "FAILED")
 
 

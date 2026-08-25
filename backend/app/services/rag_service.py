@@ -7,19 +7,68 @@ RAG Service – orchestrates retrieval-augmented generation.
 from typing import AsyncIterator, List, Dict, Optional
 import logging
 
+import sqlalchemy as sa
+
 from app.config import settings
+from app.database import engine
 from app.services.embedding_service import EmbeddingService
 from app.services.chroma_service import ChromaService
 from app.services.ai_engine import AIEngine
 from app.services.language_service import LanguageService
+from app.utils.text_splitter import splitter
 
 logger = logging.getLogger(__name__)
 
-_NO_CONTEXT_REPLY: Dict[str, str] = {
-    "en": "I couldn’t find this information in the uploaded knowledge base. Please upload the relevant document details or ask a question related to the available content.",
-    "ta": "பதிவேற்றப்பட்ட அறிவுத்தளத்தில் இந்த தகவல் கிடைக்கவில்லை. தொடர்புடைய ஆவணத்தை பதிவேற்றவும் அல்லது உள்ளடக்கத்துடன் தொடர்புடைய கேள்வியை கேட்கவும்.",
-    "hi": "अपलोड किए गए नॉलेज बेस में यह जानकारी नहीं मिली। कृपया संबंधित दस्तावेज़ अपलोड करें या उपलब्ध सामग्री से जुड़ा प्रश्न पूछें।",
-}
+
+async def _get_postgres_fallback_context(chatbot_id: str, query: str) -> str:
+    """Fallback context fetch directly from Postgres Document / RawExtractedText if ChromaDB has no chunks."""
+    try:
+        async with engine.connect() as conn:
+            # 1. Fetch raw text from RawExtractedText
+            result = await conn.execute(
+                sa.text(
+                    'SELECT "rawText" FROM "RawExtractedText" WHERE "chatbotId" = :cid ORDER BY "extractedAt" DESC'
+                ),
+                {"cid": chatbot_id},
+            )
+            raw_rows = result.scalars().all()
+            texts = [r for r in raw_rows if r and r.strip()]
+
+            if not texts:
+                # Try Document table
+                doc_result = await conn.execute(
+                    sa.text(
+                        'SELECT content FROM "Document" WHERE "chatbotId" = :cid AND status = \'DONE\' AND content != \'\' ORDER BY "createdAt" DESC'
+                    ),
+                    {"cid": chatbot_id},
+                )
+                texts = [r for r in doc_result.scalars().all() if r and r.strip()]
+
+            if not texts:
+                return ""
+
+            # Combine texts and split into chunks
+            all_text = "\n\n".join(texts)
+            all_chunks = splitter.split(all_text)
+            if not all_chunks:
+                return all_text[:8000]
+
+            # Simple keyword relevance scoring
+            query_words = set(query.lower().split())
+            scored_chunks = []
+            for chunk in all_chunks:
+                chunk_lower = chunk.lower()
+                score = sum(1 for word in query_words if len(word) > 2 and word in chunk_lower)
+                scored_chunks.append((score, chunk))
+
+            scored_chunks.sort(key=lambda x: x[0], reverse=True)
+            # Pick top chunks; if top score is 0, pick first 6 chunks
+            top_chunks = [c for s, c in scored_chunks[:6]]
+            logger.info("Postgres fallback retrieved %d chunks for chatbot=%s", len(top_chunks), chatbot_id)
+            return "\n\n---\n\n".join(top_chunks)
+    except Exception as exc:
+        logger.warning("Postgres fallback retrieval failed for chatbot=%s: %s", chatbot_id, exc)
+        return ""
 
 
 class RagService:
@@ -58,13 +107,19 @@ class RagService:
             n_results=settings.CONTEXT_CHUNKS,
             min_similarity=settings.RAG_MIN_SIMILARITY,
         )
+        
         context = "\n\n---\n\n".join(chunks) if chunks else ""
 
+        if not context:
+            logger.info("ChromaDB produced no context for chatbot=%s, attempting Postgres fallback...", chatbot_id)
+            context = await _get_postgres_fallback_context(chatbot_id, english_query)
+
         logger.info(
-            "RAG query for chatbot=%s session=%s  chunks_retrieved=%d",
+            "RAG query for chatbot=%s session=%s  chunks_retrieved=%d context_len=%d",
             chatbot_id,
             session_id,
             len(chunks),
+            len(context),
         )
 
         # 2. Stream AI response via Groq AI Engine
@@ -76,3 +131,4 @@ class RagService:
             system_prompt=system_prompt,
         ):
             yield chunk
+

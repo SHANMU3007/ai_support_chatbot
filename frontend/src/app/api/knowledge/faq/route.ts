@@ -15,8 +15,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "chatbotId and faqs array required" }, { status: 400 });
   }
 
+  const userId = session.user?.id as string;
+  const userEmail = session.user?.email?.toLowerCase();
+  const userRole = (session.user as any)?.role;
+  const adminEmails = (process.env.ADMIN_EMAILS || "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  const isAdmin = userRole === "ADMIN" || (userEmail && adminEmails.includes(userEmail));
+
   const chatbot = await prisma.chatbot.findFirst({
-    where: { id: chatbotId, userId: session.user?.id as string },
+    where: isAdmin
+      ? { id: chatbotId }
+      : {
+          id: chatbotId,
+          OR: [
+            ...(userId ? [{ userId }] : []),
+            ...(userEmail ? [{ user: { email: userEmail } }] : []),
+          ],
+        },
   });
   if (!chatbot) return NextResponse.json({ error: "Chatbot not found" }, { status: 404 });
 

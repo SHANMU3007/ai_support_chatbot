@@ -26,6 +26,34 @@ export async function streamAIResponse({
   language,
   context = "",
 }: StreamOptions): Promise<ReadableStream> {
+  let activeContext = context;
+  if (!activeContext && chatbotId) {
+    try {
+      const rawTexts = await prisma.rawExtractedText.findMany({
+        where: { chatbotId },
+        orderBy: { extractedAt: "desc" },
+        take: 3,
+        select: { rawText: true },
+      });
+      if (rawTexts.length > 0) {
+        activeContext = rawTexts.map((r) => r.rawText).join("\n\n---\n\n").slice(0, 8000);
+      } else {
+        const docs = await prisma.document.findMany({
+          where: { chatbotId, status: "DONE" },
+          orderBy: { createdAt: "desc" },
+          take: 5,
+          select: { content: true },
+        });
+        const nonEmp = docs.map((d) => d.content).filter(Boolean);
+        if (nonEmp.length > 0) {
+          activeContext = nonEmp.join("\n\n---\n\n").slice(0, 8000);
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to fetch fallback context from Prisma:", err);
+    }
+  }
+
   // Get last 6 messages from the session
   const history = await prisma.message.findMany({
     where: { sessionId },
@@ -43,16 +71,16 @@ export async function streamAIResponse({
 
   const fullSystemPrompt = `${systemPrompt}
 
-${context ? `RELEVANT KNOWLEDGE BASE CONTEXT:\n${context}\n` : "No context available."}
+${activeContext ? `RELEVANT KNOWLEDGE BASE CONTEXT:\n${activeContext}\n` : "No context available."}
 
 LANGUAGE: Respond in ${language === "en" ? "English" : language}. 
 If the user's message is in a different language, respond in that language.
 
 STRICT RULES:
 - You must ONLY answer questions using the KNOWLEDGE BASE CONTEXT above.
-- If the user asks something NOT related to the business or the context, politely say:
-  "I'm sorry, I can only help with questions related to our business. Is there anything else I can assist you with regarding our services?"
-- Do NOT answer general knowledge questions (science, history, geography, math, etc.)
+- If the requested detail is not explicitly present in the context, state clearly and politely:
+  "I do not have this specific detail in my knowledge base."
+- Do NOT answer general knowledge questions outside your business domain.
 - Do NOT make up information that is not in the context.
 - Be warm, professional, and helpful for business-related queries.
 - For complex answers, use bullet points or numbered lists.`;
