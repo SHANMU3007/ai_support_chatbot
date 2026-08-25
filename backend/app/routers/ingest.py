@@ -104,6 +104,61 @@ async def delete_document(chatbot_id: str, document_id: str):
     return JSONResponse({"status": "deleted"})
 
 
+import uuid
+from app.utils.text_splitter import splitter
+
+async def _save_raw_text(document_id: str, chatbot_id: str, raw_text: str, source_type: str = "TEXT") -> None:
+    """Save raw extracted text into RawExtractedText table and update Document content in Postgres."""
+    if not raw_text:
+        return
+    char_count = len(raw_text)
+    word_count = len(raw_text.split())
+    raw_id = f"raw_{uuid.uuid4().hex[:16]}"
+
+    for attempt in range(3):
+        try:
+            async with engine.begin() as conn:
+                # 1. Update Document content
+                await conn.execute(
+                    sa.text(
+                        'UPDATE "Document" SET content = :content, "updatedAt" = now() WHERE id = :id'
+                    ),
+                    {"content": raw_text, "id": document_id},
+                )
+                # 2. Upsert into RawExtractedText
+                await conn.execute(
+                    sa.text(
+                        '''
+                        INSERT INTO "RawExtractedText" (id, "documentId", "chatbotId", "rawText", "charCount", "wordCount", "sourceType", "extractedAt", "updatedAt")
+                        VALUES (:id, :document_id, :chatbot_id, :raw_text, :char_count, :word_count, CAST(:source_type AS "DocType"), now(), now())
+                        ON CONFLICT ("documentId") DO UPDATE
+                        SET "rawText" = EXCLUDED."rawText",
+                            "charCount" = EXCLUDED."charCount",
+                            "wordCount" = EXCLUDED."wordCount",
+                            "sourceType" = EXCLUDED."sourceType",
+                            "updatedAt" = now()
+                        '''
+                    ),
+                    {
+                        "id": raw_id,
+                        "document_id": document_id,
+                        "chatbot_id": chatbot_id,
+                        "raw_text": raw_text,
+                        "char_count": char_count,
+                        "word_count": word_count,
+                        "source_type": source_type,
+                    },
+                )
+            logger.info("Saved RawExtractedText for document %s (%d chars)", document_id, char_count)
+            return
+        except Exception as exc:
+            if attempt < 2:
+                logger.warning("Failed to save RawExtractedText (attempt %d/3): %s", attempt + 1, exc)
+                await asyncio.sleep(1.0)
+            else:
+                logger.exception("Failed to save RawExtractedText for document %s after 3 attempts", document_id)
+
+
 # ── Background task helpers ──────────────────────────────────────────────
 
 
@@ -112,7 +167,13 @@ async def _process_and_embed(
 ):
     await _update_status(document_id, "PROCESSING")
     try:
-        chunks = await doc_processor.process(filename=filename, content=content)
+        raw_text = await doc_processor.extract_text(filename=filename, content=content)
+        ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+        source_type = "PDF" if ext == "pdf" else ("DOCX" if ext in ("docx", "doc") else "TEXT")
+
+        await _save_raw_text(document_id=document_id, chatbot_id=chatbot_id, raw_text=raw_text, source_type=source_type)
+
+        chunks = splitter.split(raw_text)
         embeddings = await embedding_service.embed_chunks(chunks)
         await chroma_service.add_chunks(
             chatbot_id=chatbot_id,
@@ -131,6 +192,9 @@ async def _embed_faq(chatbot_id: str, document_id: str, pairs: list[FAQPair]):
     await _update_status(document_id, "PROCESSING")
     try:
         chunks = [f"Q: {p.question}\nA: {p.answer}" for p in pairs]
+        raw_text = "\n\n".join(chunks)
+        await _save_raw_text(document_id=document_id, chatbot_id=chatbot_id, raw_text=raw_text, source_type="FAQ")
+
         embeddings = await embedding_service.embed_chunks(chunks)
         await chroma_service.add_chunks(
             chatbot_id=chatbot_id,
@@ -177,8 +241,9 @@ async def _scrape_and_embed(
             await _update_status(document_id, "FAILED")
             return
 
-        from app.utils.text_splitter import TextSplitter
-        chunks = TextSplitter().split(combined_text)
+        await _save_raw_text(document_id=document_id, chatbot_id=chatbot_id, raw_text=combined_text, source_type="URL")
+
+        chunks = splitter.split(combined_text)
 
         if not chunks:
             logger.warning("No chunks produced from crawl of %s", url)

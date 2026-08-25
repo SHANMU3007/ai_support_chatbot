@@ -16,15 +16,17 @@ splitter = TextSplitter()
 
 
 class DocumentProcessor:
-    async def process(self, filename: str, content: bytes) -> List[str]:
+    async def extract_text(self, filename: str, content: bytes) -> str:
         ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
         if ext == "pdf":
-            text = _extract_pdf(content)
+            return _extract_pdf(content)
         elif ext in ("docx", "doc"):
-            text = _extract_docx(content)
+            return _extract_docx(content)
         else:
-            text = content.decode("utf-8", errors="replace")
+            return content.decode("utf-8", errors="replace")
 
+    async def process(self, filename: str, content: bytes) -> List[str]:
+        text = await self.extract_text(filename, content)
         chunks = splitter.split(text)
         logger.info("Processed '%s': %d chars → %d chunks", filename, len(text), len(chunks))
         return chunks

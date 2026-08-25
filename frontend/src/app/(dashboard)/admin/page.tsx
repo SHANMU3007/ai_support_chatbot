@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { Users, AlertTriangle, Activity, ArrowRight, ShieldCheck, MessageSquare, Bot, LifeBuoy } from "lucide-react";
+import { Users, AlertTriangle, Activity, ArrowRight, ShieldCheck, MessageSquare, Bot, LifeBuoy, FileText } from "lucide-react";
 
 export default async function AdminPage() {
   const session = await getServerSession(authOptions);
@@ -83,7 +83,20 @@ export default async function AdminPage() {
       </div>
 
       {/* Quick Action Feature Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <Link href="/admin/raw-texts" className="bg-white rounded-xl border p-6 hover:shadow-md hover:border-indigo-300 transition-all group">
+          <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4">
+            <FileText className="h-5 w-5" />
+          </div>
+          <h2 className="font-bold text-gray-900 flex items-center justify-between">
+            Raw Text Inspector
+            <ArrowRight className="h-4 w-4 text-gray-400 group-hover:translate-x-1 transition-transform" />
+          </h2>
+          <p className="text-xs text-gray-500 mt-1">
+            Audit full un-chunked raw extracted text from PDFs, URLs, and FAQs stored in PostgreSQL.
+          </p>
+        </Link>
+
         <Link href="/feedback" className="bg-white rounded-xl border p-6 hover:shadow-md hover:border-indigo-300 transition-all group">
           <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4">
             <LifeBuoy className="h-5 w-5" />
