@@ -181,9 +181,15 @@ class NL2SQLService:
         raw_sql = response.choices[0].message.content or ""
         raw_sql = raw_sql.strip()
 
-        # Strip markdown code fences if present
-        sql = re.sub(r"^```[a-z]*\n?", "", raw_sql, flags=re.IGNORECASE)
-        sql = re.sub(r"\n?```$", "", sql).strip()
+        # Remove preamble comments/markdown text and extract SELECT or WITH statement
+        match = re.search(r"\b(SELECT|WITH)\b[\s\S]*", raw_sql, flags=re.IGNORECASE)
+        if match:
+            sql = match.group(0).strip()
+            # Remove trailing markdown code fences if any
+            sql = re.sub(r"```.*$", "", sql, flags=re.DOTALL).strip()
+            sql = sql.rstrip(";")
+        else:
+            sql = raw_sql
 
         # Safety: replace any bind-parameter placeholders the model may have
         # emitted ($1, $2, %s, :user_id, ?) with the literal user_id string.
@@ -192,8 +198,10 @@ class NL2SQLService:
         sql = re.sub(r":user_id\b", f"'{safe_id}'", sql, flags=re.IGNORECASE)
         sql = re.sub(r"%s", f"'{safe_id}'", sql)
 
-        # Safety check – allow SELECT only
-        if not sql.lower().lstrip().startswith("select"):
+        # Security check – allow SELECT / WITH queries only, disallow destructive DDL/DML
+        disallowed_pattern = r"\b(INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|CREATE|EXEC|GRANT|REVOKE)\b"
+        sql_lower = sql.lower().lstrip()
+        if not (sql_lower.startswith("select") or sql_lower.startswith("with")) or re.search(disallowed_pattern, sql, flags=re.IGNORECASE):
             return {"error": "Only SELECT queries are allowed.", "sql": sql, "columns": [], "rows": [], "rowCount": 0}
 
         # 2. Execute SQL
